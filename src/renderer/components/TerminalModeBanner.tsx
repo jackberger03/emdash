@@ -7,15 +7,10 @@ type Props = {
 };
 
 export const TerminalModeBanner: React.FC<Props> = ({ provider, onOpenExternal }) => {
-  const meta = providerMeta[provider];
+  const meta: any = (providerMeta as any)[provider];
   const helpUrl = meta?.helpUrl;
 
-  const text =
-    provider === 'droid'
-      ? 'Interact with Droid in the terminal below. To install and get started, see the Factory CLI Quickstart:'
-      : provider === 'gemini'
-        ? 'Interact with Gemini in the terminal below. To install and get started, visit the Gemini CLI project:'
-        : 'Interact with Cursor in the terminal below. To install and get started, follow the Cursor CLI docs:';
+  const text = `Interact with ${meta?.label || 'this provider'} in the terminal below. To install and get started, see the documentation:`;
 
   return (
     <div className="rounded-md border border-gray-200 bg-gray-50 text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 p-3 text-sm">

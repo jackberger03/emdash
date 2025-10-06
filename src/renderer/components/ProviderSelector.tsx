@@ -15,6 +15,7 @@ import claudeLogo from '../../assets/images/claude.png';
 import factoryLogo from '../../assets/images/factorydroid.png';
 import geminiLogo from '../../assets/images/gemini.png';
 import cursorLogo from '../../assets/images/cursorlogo.png';
+import warpLogo from '../../assets/images/warp.png';
 
 interface ProviderSelectorProps {
   value: Provider;
@@ -48,6 +49,11 @@ const providerConfig = {
     name: 'Cursor',
     logo: cursorLogo,
     alt: 'Cursor CLI',
+  },
+  warp: {
+    name: 'Warp',
+    logo: warpLogo,
+    alt: 'Warp CLI',
   },
 } as const;
 

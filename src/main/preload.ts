@@ -20,6 +20,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   ptyResize: (args: { id: string; cols: number; rows: number }) =>
     ipcRenderer.send('pty:resize', args),
   ptyKill: (id: string) => ipcRenderer.send('pty:kill', { id }),
+  cliWhich: (candidates: string[]) => ipcRenderer.invoke('cli:which', { candidates }),
 
   onPtyData: (id: string, listener: (data: string) => void) => {
     const channel = `pty:data:${id}`;
@@ -259,6 +260,7 @@ export interface ElectronAPI {
   ptyInput: (args: { id: string; data: string }) => void;
   ptyResize: (args: { id: string; cols: number; rows: number }) => void;
   ptyKill: (id: string) => void;
+  cliWhich: (candidates: string[]) => Promise<{ ok: boolean; found?: string | null; error?: string }>;
   onPtyData: (id: string, listener: (data: string) => void) => () => void;
   onPtyHistory: (id: string, listener: (data: string) => void) => () => void;
   onPtyExit: (

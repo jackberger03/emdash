@@ -8,7 +8,7 @@ export type ProviderMeta = {
   helpUrl?: string; // docs link for terminal-only providers
 };
 
-export const providerMeta: Record<UiProvider, ProviderMeta> = {
+export const providerMeta: Record<UiProvider | 'warp', ProviderMeta> = {
   codex: {
     label: 'Codex',
     icon: '../../assets/images/openai.png',
@@ -39,5 +39,14 @@ export const providerMeta: Record<UiProvider, ProviderMeta> = {
     terminalOnly: true,
     cli: 'cursor-agent',
     helpUrl: 'https://cursor.com/install',
+  },
+  // Note: extending with 'warp' here; UiProvider extended where consumed.
+  warp: {
+    label: 'Warp',
+    icon: '../../assets/images/warp.png',
+    terminalOnly: true,
+    // Default to 'warp' command; users on Linux may have 'warp-cli' or 'warp-terminal'
+    cli: 'warp',
+    helpUrl: 'https://docs.warp.dev/developers/cli',
   },
 };

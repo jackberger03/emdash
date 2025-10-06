@@ -1,4 +1,10 @@
 import { ipcMain, WebContents } from 'electron';
+import os from 'os';
+import fs from 'fs';
+import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+const execFileAsync = promisify(execFile);
 import { startPty, writePty, resizePty, killPty, getPty } from './ptyManager';
 
 const owners = new Map<string, WebContents>();
@@ -106,4 +112,46 @@ export function registerPtyIpc(): void {
       console.error('pty:kill error', e);
     }
   });
+
+  ipcMain.handle(
+    'cli:which',
+    async (
+      _event,
+      args: { candidates: string[] }
+    ): Promise<{ ok: boolean; found?: string | null; error?: string }> => {
+      try {
+        const candidates = Array.isArray(args?.candidates) ? args.candidates : [];
+        if (candidates.length === 0) return { ok: true, found: null };
+        const platform = os.platform();
+        const binDirs: string[] =
+          platform === 'darwin'
+            ? ['/opt/homebrew/bin', '/usr/local/bin', '/usr/bin', '/bin']
+            : platform === 'linux'
+              ? ['/usr/local/bin', '/usr/bin', '/bin']
+              : [];
+
+        for (const cmd of candidates) {
+          try {
+            if (platform === 'win32') {
+              const { stdout } = await execFileAsync('where', [cmd]);
+              if (stdout && stdout.trim()) return { ok: true, found: cmd };
+            } else {
+              const { stdout } = await execFileAsync('bash', ['-lc', `command -v ${cmd}`]);
+              if (stdout && stdout.trim()) return { ok: true, found: stdout.trim() };
+              // Fallback: probe common bin directories explicitly
+              for (const dir of binDirs) {
+                const p = path.join(dir, cmd);
+                if (fs.existsSync(p)) return { ok: true, found: p };
+              }
+            }
+          } catch {
+            // try next
+          }
+        }
+        return { ok: true, found: null };
+      } catch (e: any) {
+        return { ok: false, error: String(e?.message || e) };
+      }
+    }
+  );
 }

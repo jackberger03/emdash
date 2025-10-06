@@ -40,15 +40,18 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
   const [isClaudeInstalled, setIsClaudeInstalled] = useState<boolean | null>(null);
   const [claudeInstructions, setClaudeInstructions] = useState<string | null>(null);
   const [agentCreated, setAgentCreated] = useState(false);
-  const [provider, setProvider] = useState<'codex' | 'claude' | 'droid' | 'gemini' | 'cursor'>(
+  const [provider, setProvider] = useState<'codex' | 'claude' | 'droid' | 'gemini' | 'cursor' | 'warp'>(
     'codex'
   );
   const [lockedProvider, setLockedProvider] = useState<
-    'codex' | 'claude' | 'droid' | 'gemini' | 'cursor' | null
+    'codex' | 'claude' | 'droid' | 'gemini' | 'cursor' | 'warp' | null
   >(null);
   const [hasDroidActivity, setHasDroidActivity] = useState(false);
   const [hasGeminiActivity, setHasGeminiActivity] = useState(false);
   const [hasCursorActivity, setHasCursorActivity] = useState(false);
+  const [hasWarpActivity, setHasWarpActivity] = useState(false);
+  const [warpAvailable, setWarpAvailable] = useState<boolean | null>(null);
+  const [warpCommand, setWarpCommand] = useState<string | null>(null);
   const initializedConversationRef = useRef<string | null>(null);
 
   const codexStream = useCodexStream({
@@ -77,6 +80,7 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
         | 'droid'
         | 'gemini'
         | 'cursor'
+        | 'warp'
         | null;
       const locked = window.localStorage.getItem(lockedKey) as
         | 'codex'
@@ -84,12 +88,14 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
         | 'droid'
         | 'gemini'
         | 'cursor'
+        | 'warp'
         | null;
 
       setLockedProvider(locked);
       setHasDroidActivity(locked === 'droid');
       setHasGeminiActivity(locked === 'gemini');
       setHasCursorActivity(locked === 'cursor');
+      setHasWarpActivity(locked === 'warp');
 
       if (locked === 'droid') {
         setProvider('droid');
@@ -103,6 +109,10 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
         setProvider('cursor');
       } else if (last === 'cursor') {
         setProvider('cursor');
+      } else if (locked === 'warp') {
+        setProvider('warp');
+      } else if (last === 'warp') {
+        setProvider('warp');
       } else if (locked === 'codex' || locked === 'claude') {
         setProvider(locked);
       } else if (last === 'codex' || last === 'claude') {
@@ -119,8 +129,69 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
   useEffect(() => {
     try {
       window.localStorage.setItem(`provider:last:${workspace.id}`, provider);
+      window.localStorage.setItem(`provider:current:${workspace.id}`, provider);
     } catch {}
   }, [provider, workspace.id]);
+
+  // Check Warp CLI availability when provider is warp
+  useEffect(() => {
+    let cancelled = false;
+    if (provider !== 'warp') {
+      setWarpAvailable(null);
+      setWarpCommand(null);
+      return;
+    }
+    (async () => {
+      try {
+        // Prefer CLI-only binaries first to avoid launching the GUI app
+        const res = await (window as any).electronAPI.cliWhich([
+          'warp-cli',
+          'warp-terminal',
+          'warp-cli-preview',
+          'warp-terminal-preview',
+          'warp',
+          'warp-preview',
+        ]);
+        if (!cancelled) {
+          setWarpAvailable(!!res?.found);
+          setWarpCommand(res?.found || null);
+        }
+      } catch {
+        if (!cancelled) {
+          setWarpAvailable(false);
+          setWarpCommand(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [provider]);
+
+  // Auto-run a safe Warp CLI command when Warp mode is selected
+  useEffect(() => {
+    if (provider !== 'warp') return;
+    const id = `warp-main-${workspace.id}`;
+    const ranKey = `warp:intro:ran:${workspace.id}`;
+    const t = setTimeout(() => {
+      try {
+        const already = window.localStorage.getItem(ranKey);
+        if (!already) {
+          if (warpAvailable && warpCommand) {
+            // Run a safe help command rather than launching the GUI app
+            (window as any).electronAPI.ptyInput({ id, data: `${warpCommand} help\n` });
+          } else {
+            (window as any).electronAPI.ptyInput({
+              id,
+              data: 'echo "Warp CLI not found. See docs: https://docs.warp.dev/developers/cli"\n',
+            });
+          }
+          window.localStorage.setItem(ranKey, '1');
+        }
+      } catch {}
+    }, 550);
+    return () => clearTimeout(t);
+  }, [provider, workspace.id, warpAvailable, warpCommand]);
 
   // When a chat becomes locked (first user message sent or terminal activity), persist the provider
   useEffect(() => {
@@ -129,13 +200,15 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
         provider !== 'droid' &&
         provider !== 'gemini' &&
         provider !== 'cursor' &&
+        provider !== 'warp' &&
         activeStream.messages &&
         activeStream.messages.some((m) => m.sender === 'user');
       const droidLocked = provider === 'droid' && hasDroidActivity;
       const geminiLocked = provider === 'gemini' && hasGeminiActivity;
       const cursorLocked = provider === 'cursor' && hasCursorActivity;
+      const warpLocked = provider === 'warp' && hasWarpActivity;
 
-      if (userLocked || droidLocked || geminiLocked || cursorLocked) {
+      if (userLocked || droidLocked || geminiLocked || cursorLocked || warpLocked) {
         window.localStorage.setItem(`provider:locked:${workspace.id}`, provider);
         setLockedProvider(provider);
       }
@@ -147,6 +220,7 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
     hasDroidActivity,
     hasGeminiActivity,
     hasCursorActivity,
+    hasWarpActivity,
   ]);
 
   // Check Claude Code installation when selected
@@ -335,7 +409,7 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
 
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`}>
-      {provider === 'droid' || provider === 'gemini' || provider === 'cursor' ? (
+      {provider === 'droid' || provider === 'gemini' || provider === 'cursor' || provider === 'warp' ? (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-4">
             <div className="max-w-4xl mx-auto">
@@ -350,6 +424,31 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
               <WorkspaceNotice workspaceName={workspace.name} />
             </div>
           </div>
+          {provider === 'warp' && warpAvailable === false ? (
+            <div className="px-6 mt-2">
+              <div className="max-w-4xl mx-auto">
+                <div className="rounded-md border border-amber-300 bg-amber-50 text-amber-900 p-3 text-sm">
+                  Warp CLI was not found on your PATH. Install it and then reselect Warp:
+                  <div className="mt-2 text-gray-800">
+                    - macOS: <code class="px-1 py-0.5 bg-white/60 rounded">brew install --cask warp</code>
+                  </div>
+                  <div className="text-gray-800">
+                    - Standalone CLI (macOS): <code class="px-1 py-0.5 bg-white/60 rounded">brew tap warpdotdev/warp &amp;&amp; brew install --cask warp-cli</code>
+                  </div>
+                  <div className="text-gray-800">
+                    - Linux: install <code class="px-1 py-0.5 bg-white/60 rounded">warp-terminal</code> via your package manager
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => window.electronAPI.openExternal('https://docs.warp.dev/developers/cli')}
+                    className="mt-2 underline"
+                  >
+                    https://docs.warp.dev/developers/cli
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           <div className="flex-1 min-h-0 px-6 mt-4">
             <div className="max-w-4xl mx-auto h-full rounded-md overflow-hidden">
               {provider === 'droid' ? (
@@ -379,6 +478,21 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
                       setHasGeminiActivity(true);
                       window.localStorage.setItem(`provider:locked:${workspace.id}`, 'gemini');
                       setLockedProvider('gemini');
+                    } catch {}
+                  }}
+                  variant="light"
+                  className="h-full w-full"
+                />
+              ) : provider === 'warp' ? (
+                <TerminalPane
+                  id={`warp-main-${workspace.id}`}
+                  cwd={workspace.path}
+                  shell={undefined}
+                  keepAlive={true}
+                  onActivity={() => {
+                    try {
+                      window.localStorage.setItem(`provider:locked:${workspace.id}`, 'warp');
+                      setLockedProvider('warp');
                     } catch {}
                   }}
                   variant="light"
@@ -450,12 +564,12 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
         onSend={handleSendMessage}
         onCancel={handleCancelStream}
         isLoading={
-          provider === 'droid' || provider === 'gemini' || provider === 'cursor'
+          provider === 'droid' || provider === 'gemini' || provider === 'cursor' || provider === 'warp'
             ? false
             : activeStream.isStreaming
         }
         loadingSeconds={
-          provider === 'droid' || provider === 'gemini' || provider === 'cursor'
+          provider === 'droid' || provider === 'gemini' || provider === 'cursor' || provider === 'warp'
             ? 0
             : activeStream.seconds
         }
@@ -469,6 +583,7 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className }) =
           provider === 'droid' ||
           provider === 'gemini' ||
           provider === 'cursor' ||
+          provider === 'warp' ||
           (provider === 'claude' && isClaudeInstalled === false)
         }
       />

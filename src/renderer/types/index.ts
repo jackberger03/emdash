@@ -45,4 +45,4 @@ export interface Workspace {
   repos: Repo[];
 }
 
-export type Provider = 'codex' | 'claude' | 'droid' | 'gemini' | 'cursor';
+export type Provider = 'codex' | 'claude' | 'droid' | 'gemini' | 'cursor' | 'warp';
