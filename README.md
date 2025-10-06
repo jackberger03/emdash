@@ -20,7 +20,7 @@
   alt="Emdash" width="900">
   </p>
 
-emdash is a UI layer for running multiple coding agents in parallel — currently supporting OpenAI Codex CLI, Claude Code CLI, Droid (Factory CLI), and Gemini CLI. Each agent runs in its own Git worktree so you can fan out tasks, keep changes compartmentalized, and manage everything from a single UI.
+emdash is a UI layer for running multiple coding agents in parallel — currently supporting OpenAI Codex CLI, Claude Code CLI, Droid (Factory CLI), Gemini CLI, and Cursor CLI. Each agent runs in its own Git worktree so you can fan out tasks, keep changes compartmentalized, and manage everything from a single UI.
 
 <p align="center">
     <img src="./docs/media/emdash-screenshot.png" alt="Emdash app screenshot" width="100%">
@@ -39,6 +39,7 @@ Either download the DMG from Releases (or click the link above), or run the app 
 - One or more providers (install as needed):
   - [OpenAI Codex CLI](https://github.com/openai/codex) (install + authenticate)
   - Optional: [Claude Code CLI](https://www.npmjs.com/package/@anthropic-ai/claude-code) (install + authenticate)
+  - Optional: [Cursor CLI](https://docs.cursor.com/cli) (install + authenticate)
 - Optional: [GitHub CLI](https://docs.github.com/en/github-cli/github-cli/quickstart) for PRs, badges, and repo info
 
 ### Codex CLI
@@ -64,6 +65,18 @@ npm install -g @anthropic-ai/claude-code
 # start and login
 claude
 # then use /login inside the CLI
+```
+
+### Cursor CLI (optional)
+
+Install the Cursor CLI and authenticate it:
+
+```bash
+# Install Cursor CLI
+npm install -g @cursor/cli
+
+# authenticate
+cursor auth
 ```
 
 ### GitHub CLI
@@ -247,7 +260,7 @@ find "$HOME" -type f -name 'emdash.db*' -print
 
 ## What's Next
 
-- [ ] Additional providers (e.g., Gemini CLI, aider, Warp)
+- [ ] Additional providers (e.g., aider, Warp)
 - [ ] Workspace lifecycle hooks to run custom scripts on create, run, and archive (e.g., install deps, copy env files, clean up resources)
 - [ ] Planning chat with controlled execution (draft actions in a separate chat, then run them one by one)
 - [ ] Linear integration to track and close out issues
