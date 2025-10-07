@@ -62,9 +62,9 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
     initializedConversationRef.current = null;
   }, [workspace.id]);
 
-  // On workspace change, restore last-selected provider (including Droid).
-  // If a locked provider exists (including Droid), prefer locked.
-  // If initialProvider is provided, use it as the highest priority.
+  // On workspace change, restore last-selected provider.
+  // If a locked provider exists, prefer locked.
+  // If initialProvider is provided, use it with remap to CLI variants.
   useEffect(() => {
     try {
       const lastKey = `provider:last:${workspace.id}`;
@@ -77,9 +77,16 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
       setHasGeminiActivity(locked === 'gemini');
       setHasCursorActivity(locked === 'cursor');
 
-      // Priority: initialProvider > locked > last > default
+      // Remap legacy chat-stream providers to CLI variants by default
+      const remap = (p: Provider | null): Provider | null => {
+        if (p === 'codex') return 'codex-cli';
+        if (p === 'claude') return 'claude-cli';
+        return p;
+      };
+
+      // Priority: initialProvider (remapped) > locked (remapped) > last (remapped) > default (codex-cli)
       if (initialProvider) {
-        setProvider(initialProvider);
+        setProvider(remap(initialProvider) || 'codex-cli');
       } else if (locked === 'droid') {
         setProvider('droid');
       } else if (last === 'droid') {
@@ -92,39 +99,35 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
         setProvider('cursor');
       } else if (last === 'cursor') {
         setProvider('cursor');
-      } else if (locked === 'codex' || locked === 'claude') {
-        setProvider(locked);
-      } else if (last === 'codex' || last === 'claude') {
-        setProvider(last);
+      } else if (locked) {
+        setProvider(remap(locked) || 'codex-cli');
+      } else if (last) {
+        setProvider(remap(last) || 'codex-cli');
       } else {
-        setProvider('codex');
+        setProvider('codex-cli');
       }
     } catch {
-      setProvider(initialProvider || 'codex');
+      setProvider((initialProvider && (initialProvider === 'codex' ? 'codex-cli' : initialProvider === 'claude' ? 'claude-cli' : initialProvider)) || 'codex-cli');
     }
   }, [workspace.id, initialProvider]);
 
-  // Persist last-selected provider per workspace (including Droid)
+  // Persist current + last-selected provider per workspace
   useEffect(() => {
     try {
       window.localStorage.setItem(`provider:last:${workspace.id}`, provider);
+      window.localStorage.setItem(`provider:current:${workspace.id}`, provider);
     } catch {}
   }, [provider, workspace.id]);
 
-  // When a chat becomes locked (first user message sent or terminal activity), persist the provider
+  // When a chat becomes locked (first user message sent), persist the provider
   useEffect(() => {
     try {
       const userLocked =
-        provider !== 'droid' &&
-        provider !== 'gemini' &&
-        provider !== 'cursor' &&
+        (provider === 'codex' || provider === 'claude') &&
         activeStream.messages &&
         activeStream.messages.some((m) => m.sender === 'user');
-      const droidLocked = provider === 'droid' && hasDroidActivity;
-      const geminiLocked = provider === 'gemini' && hasGeminiActivity;
-      const cursorLocked = provider === 'cursor' && hasCursorActivity;
 
-      if (userLocked || droidLocked || geminiLocked || cursorLocked) {
+      if (userLocked) {
         window.localStorage.setItem(`provider:locked:${workspace.id}`, provider);
         setLockedProvider(provider);
       }
@@ -290,6 +293,57 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return;
+    // Terminal-only providers: write into PTY instead of chat stream
+    const isTerminalOnly =
+      provider === 'droid' ||
+      provider === 'gemini' ||
+      provider === 'cursor' ||
+      (provider as any) === 'warp' ||
+      provider === 'codex-cli' ||
+      provider === 'claude-cli';
+
+    if (isTerminalOnly) {
+      const ptyId =
+        provider === 'droid'
+          ? `droid-main-${workspace.id}`
+          : provider === 'gemini'
+            ? `gemini-main-${workspace.id}`
+            : provider === 'cursor'
+              ? `cursor-main-${workspace.id}`
+              : (provider as any) === 'warp'
+                ? `warp-main-${workspace.id}`
+                : provider === 'codex-cli'
+                  ? `codex-cli-main-${workspace.id}`
+                  : `claude-cli-main-${workspace.id}`;
+
+      try {
+        // Send command into PTY: write text, then explicit CR to execute immediately
+        const send = (d:string)=> (window as any).electronAPI.ptyInput({ id: ptyId, data: d });
+        if (provider === 'claude-cli') {
+          // Claude CLI: bracketed paste + single Enter (no double Enter)
+          send('\x1b[200~' + inputValue + '\x1b[201~');
+          send('\r');
+        } else if (provider === 'codex-cli') {
+          send('\x1b[200~' + inputValue + '\x1b[201~');
+          send('\r');
+        } else {
+          send(inputValue);
+          send('\r');
+        }
+        // Synthesize an Enter event for activity tracking
+        window.dispatchEvent(
+          new CustomEvent('pty:user-enter', { detail: { id: ptyId, ts: Date.now() } })
+        );
+        // Lock provider for this workspace
+        window.localStorage.setItem(`provider:locked:${workspace.id}`, provider);
+        setLockedProvider(provider);
+      } catch (e) {
+        console.error('Failed to write to PTY:', e);
+      }
+      setInputValue('');
+      return;
+    }
+
     if (provider === 'claude' && isClaudeInstalled === false) {
       toast({
         title: 'Claude Code not installed',
@@ -345,7 +399,7 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
 
   return (
     <div className={`flex flex-col h-full bg-white dark:bg-gray-800 ${className}`}>
-      {provider === 'droid' || provider === 'gemini' || provider === 'cursor' ? (
+      {provider === 'droid' || provider === 'gemini' || provider === 'cursor' || provider === 'codex-cli' || provider === 'claude-cli' ? (
         <div className="flex-1 flex flex-col min-h-0">
           <div className="px-6 pt-4">
             <div className="max-w-4xl mx-auto">
@@ -371,8 +425,6 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
                   onActivity={() => {
                     try {
                       setHasDroidActivity(true);
-                      window.localStorage.setItem(`provider:locked:${workspace.id}`, 'droid');
-                      setLockedProvider('droid');
                     } catch {}
                   }}
                   variant="light"
@@ -387,8 +439,36 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
                   onActivity={() => {
                     try {
                       setHasGeminiActivity(true);
-                      window.localStorage.setItem(`provider:locked:${workspace.id}`, 'gemini');
-                      setLockedProvider('gemini');
+                    } catch {}
+                  }}
+                  variant="light"
+                  className="h-full w-full"
+                />
+              ) : provider === 'codex-cli' ? (
+                <TerminalPane
+                  id={`codex-cli-main-${workspace.id}`}
+                  cwd={workspace.path}
+                  shell={providerMeta['codex-cli']?.cli}
+                  keepAlive={true}
+                  logSession={false}
+                  onActivity={() => {
+                    try {
+                      /* no-op lock on activity; lock occurs on first send */
+                    } catch {}
+                  }}
+                  variant="light"
+                  className="h-full w-full"
+                />
+              ) : provider === 'claude-cli' ? (
+                <TerminalPane
+                  id={`claude-cli-main-${workspace.id}`}
+                  cwd={workspace.path}
+                  shell={providerMeta['claude-cli']?.cli}
+                  keepAlive={true}
+                  logSession={false}
+                  onActivity={() => {
+                    try {
+                      /* no-op lock on activity; lock occurs on first send */
                     } catch {}
                   }}
                   variant="light"
@@ -403,8 +483,6 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
                   onActivity={() => {
                     try {
                       setHasCursorActivity(true);
-                      window.localStorage.setItem(`provider:locked:${workspace.id}`, 'cursor');
-                      setLockedProvider('cursor');
                     } catch {}
                   }}
                   variant="light"
@@ -460,12 +538,12 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
         onSend={handleSendMessage}
         onCancel={handleCancelStream}
         isLoading={
-          provider === 'droid' || provider === 'gemini' || provider === 'cursor'
+          provider === 'droid' || provider === 'gemini' || provider === 'cursor' || provider === 'codex-cli' || provider === 'claude-cli'
             ? false
             : activeStream.isStreaming
         }
         loadingSeconds={
-          provider === 'droid' || provider === 'gemini' || provider === 'cursor'
+          provider === 'droid' || provider === 'gemini' || provider === 'cursor' || provider === 'codex-cli' || provider === 'claude-cli'
             ? 0
             : activeStream.seconds
         }
@@ -475,12 +553,7 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
         provider={provider}
         onProviderChange={(p) => setProvider(p)}
         selectDisabled={providerLocked}
-        disabled={
-          provider === 'droid' ||
-          provider === 'gemini' ||
-          provider === 'cursor' ||
-          (provider === 'claude' && isClaudeInstalled === false)
-        }
+        disabled={provider === 'claude' && isClaudeInstalled === false}
       />
     </div>
   );

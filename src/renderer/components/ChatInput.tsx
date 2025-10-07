@@ -190,22 +190,33 @@ export const ChatInput: React.FC<ChatInputProps> = ({
     if (provider === 'droid') return 'Factory Droid uses the terminal above.';
     if (provider === 'gemini') return 'Gemini CLI uses the terminal above.';
     if (provider === 'cursor') return 'Cursor CLI runs in the terminal above.';
+    if (provider === 'warp') return 'Warp CLI runs in the terminal above.';
+    if (provider === 'codex-cli') return 'Codex CLI runs in the terminal above.';
+    if (provider === 'claude-cli') return 'Claude Code CLI runs in the terminal above.';
     return 'Tell Codex what to do...';
   };
 
   const trimmedValue = value.trim();
+  const isTerminalOnly =
+    provider === 'droid' ||
+    provider === 'gemini' ||
+    provider === 'cursor' ||
+    (provider as any) === 'warp' ||
+    provider === 'codex-cli' ||
+    provider === 'claude-cli';
+
   const baseDisabled =
     disabled ||
     (provider === 'codex'
       ? !isCodexInstalled || !agentCreated
       : provider === 'claude'
         ? !agentCreated
-        : true); // droid/gemini/cursor: input disabled, terminal-only
+        : false); // enable input for terminal-only providers
 
   const textareaDisabled = baseDisabled || isLoading;
   const sendDisabled =
-    provider === 'droid' || provider === 'gemini' || provider === 'cursor'
-      ? true
+    isTerminalOnly
+      ? baseDisabled || !trimmedValue
       : isLoading
         ? baseDisabled
         : baseDisabled || !trimmedValue;
@@ -290,18 +301,10 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     ? 'bg-gray-200 dark:bg-gray-700 hover:bg-red-300 hover:text-white dark:hover:text-white'
                     : 'bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
                 }`}
-                aria-label={
-                  provider === 'droid' || provider === 'gemini' || provider === 'cursor'
-                    ? 'Terminal-only provider'
-                    : isLoading
-                      ? 'Stop Codex'
-                      : 'Send'
-                }
+                aria-label={isTerminalOnly ? 'Send command' : isLoading ? 'Stop Codex' : 'Send'}
               >
-                {provider === 'droid' || provider === 'gemini' || provider === 'cursor' ? (
-                  <div className="flex items-center justify-center w-full h-full">
-                    <div className="w-3.5 h-3.5 rounded-[3px] bg-gray-500 dark:bg-gray-300" />
-                  </div>
+                {isTerminalOnly ? (
+                  <ArrowRight className="w-4 h-4" />
                 ) : isLoading ? (
                   <div className="flex items-center justify-center w-full h-full">
                     <div className="w-3.5 h-3.5 rounded-[3px] bg-gray-500 dark:bg-gray-300 transition-colors duration-150 group-hover:bg-red-500" />

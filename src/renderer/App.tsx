@@ -94,8 +94,10 @@ interface Workspace {
 }
 
 const TITLEBAR_HEIGHT = '36px';
-const PANEL_LAYOUT_STORAGE_KEY = 'emdash.layout.left-main-right.v1';
-const DEFAULT_PANEL_LAYOUT: [number, number, number] = [24, 56, 20];
+// Bump storage key to reset old asymmetric layouts and apply new symmetric defaults
+const PANEL_LAYOUT_STORAGE_KEY = 'emdash.layout.left-main-right.v2';
+// Default layout: left 20%, middle 60%, right 20% (symmetry between sidebars)
+const DEFAULT_PANEL_LAYOUT: [number, number, number] = [20, 60, 20];
 const LEFT_SIDEBAR_MIN_SIZE = 16;
 const LEFT_SIDEBAR_MAX_SIZE = 30;
 const RIGHT_SIDEBAR_MIN_SIZE = 16;
@@ -140,9 +142,19 @@ const App: React.FC = () => {
   const showAgentRequirement = isCodexInstalled === false && isClaudeInstalled === false;
 
   const defaultPanelLayout = React.useMemo(() => {
-    const stored = loadPanelSizes(PANEL_LAYOUT_STORAGE_KEY, DEFAULT_PANEL_LAYOUT);
-    const [storedLeft = DEFAULT_PANEL_LAYOUT[0], , storedRight = DEFAULT_PANEL_LAYOUT[2]] =
-      Array.isArray(stored) && stored.length === 3 ? stored : DEFAULT_PANEL_LAYOUT;
+    let stored = loadPanelSizes(PANEL_LAYOUT_STORAGE_KEY, DEFAULT_PANEL_LAYOUT);
+    // Migrate from older default [24,56,20] to symmetric [20,60,20]
+    if (
+      Array.isArray(stored) &&
+      stored.length === 3 &&
+      Math.abs(stored[0] - 24) < 0.0001 &&
+      Math.abs(stored[1] - 56) < 0.0001 &&
+      Math.abs(stored[2] - 20) < 0.0001
+    ) {
+      stored = DEFAULT_PANEL_LAYOUT;
+      savePanelSizes(PANEL_LAYOUT_STORAGE_KEY, stored);
+    }
+    const [storedLeft = DEFAULT_PANEL_LAYOUT[0], , storedRight = DEFAULT_PANEL_LAYOUT[2]] = stored;
     const left = clampLeftSidebarSize(storedLeft);
     const right = clampRightSidebarSize(storedRight);
     const middle = Math.max(0, 100 - left - right);
@@ -217,9 +229,18 @@ const App: React.FC = () => {
       }
 
       if (open) {
-        const target = clampLeftSidebarSize(lastLeftSidebarSizeRef.current || DEFAULT_PANEL_LAYOUT[0]);
+        // When opening, prefer symmetry with the right sidebar if no meaningful left size stored
+        const symmetric = clampRightSidebarSize(
+          lastRightSidebarSizeRef.current || DEFAULT_PANEL_LAYOUT[2]
+        );
+        const fallback = DEFAULT_PANEL_LAYOUT[0];
+        const candidate = lastLeftSidebarSizeRef.current && lastLeftSidebarSizeRef.current > 0
+          ? lastLeftSidebarSizeRef.current
+          : symmetric || fallback;
+        const target = clampLeftSidebarSize(candidate);
         panel.expand();
         panel.resize(target);
+        lastLeftSidebarSizeRef.current = target;
       } else {
         const currentSize = panel.getSize();
         if (typeof currentSize === 'number' && currentSize > 0) {
@@ -586,7 +607,14 @@ const App: React.FC = () => {
 
         // Set the active workspace and its provider
         setActiveWorkspace(newWorkspace);
-        setActiveWorkspaceProvider(selectedProvider || 'codex');
+        setActiveWorkspaceProvider(selectedProvider || ('codex-cli' as any));
+
+        try {
+          // Default new workspaces to Codex Code (CLI) when not explicitly chosen
+          const sel = (selectedProvider || ('codex-cli' as any)) as any;
+          window.localStorage.setItem(`provider:last:${newWorkspace.id}`, sel);
+          window.localStorage.setItem(`provider:current:${newWorkspace.id}`, sel);
+        } catch {}
 
         toast({
           title: 'Workspace Created',

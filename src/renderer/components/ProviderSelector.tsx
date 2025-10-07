@@ -23,13 +23,25 @@ interface ProviderSelectorProps {
   className?: string;
 }
 
-const providerConfig = {
+type ProviderConfig = { name: string; logo: string; alt: string };
+
+const providerConfig: Partial<Record<Provider, ProviderConfig>> = {
   codex: {
     name: 'Codex',
     logo: openaiLogo,
     alt: 'Codex',
   },
+  'codex-cli': {
+    name: 'Codex',
+    logo: openaiLogo,
+    alt: 'Codex',
+  },
   claude: {
+    name: 'Claude Code (Legacy)',
+    logo: claudeLogo,
+    alt: 'Claude Code',
+  },
+  'claude-cli': {
     name: 'Claude Code',
     logo: claudeLogo,
     alt: 'Claude Code',
@@ -51,6 +63,29 @@ const providerConfig = {
   },
 } as const;
 
+function displayNameFor(p: Provider): string {
+  switch (p) {
+    case 'codex-cli':
+      return 'Codex Code';
+    case 'claude-cli':
+      return 'Claude Code';
+    case 'warp':
+      return 'Warp';
+    case 'droid':
+      return 'Droid';
+    case 'gemini':
+      return 'Gemini';
+    case 'cursor':
+      return 'Cursor';
+    case 'codex':
+      return 'Codex (Legacy)';
+    case 'claude':
+      return 'Claude Code (Legacy)';
+    default:
+      return String(p);
+  }
+}
+
 export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
   value,
   onChange,
@@ -59,7 +94,12 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
 }) => {
   const [isSelectOpen, setIsSelectOpen] = useState(false);
 
-  const currentProvider = providerConfig[value];
+  const currentProvider: ProviderConfig =
+    providerConfig[value] || ({
+      name: displayNameFor(value),
+      logo: openaiLogo,
+      alt: displayNameFor(value),
+    } as ProviderConfig);
 
   return (
     <div className={`relative inline-block w-[12rem] ${className}`}>
@@ -89,7 +129,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                       alt={currentProvider.alt}
                       className="w-4 h-4 shrink-0"
                     />
-                    <SelectValue placeholder="Select provider" />
+                    <span className="text-sm">{currentProvider?.name ?? 'Select provider'}</span>
                   </div>
                 </SelectTrigger>
               </TooltipTrigger>
@@ -106,7 +146,7 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
                 alt={currentProvider.alt}
                 className="w-4 h-4 shrink-0"
               />
-              <SelectValue placeholder="Select provider" />
+              <span className="text-sm">{currentProvider?.name ?? 'Select provider'}</span>
             </div>
             <ChevronUp
               className={`h-4 w-4 text-gray-500 transition-transform duration-200 ${
@@ -116,14 +156,20 @@ export const ProviderSelector: React.FC<ProviderSelectorProps> = ({
           </SelectTrigger>
         )}
         <SelectContent>
-          {Object.entries(providerConfig).map(([key, config]) => (
+          {Object.entries(providerConfig)
+            // Hide legacy chat-stream providers from selection, but keep them renderable if already selected
+            .filter(([key, cfg]) => key !== 'codex' && key !== 'claude' && !!cfg)
+            .map(([key, cfg]) => {
+              const config = cfg as ProviderConfig;
+              return (
             <SelectItem key={key} value={key}>
               <div className="flex items-center gap-2">
                 <img src={config.logo} alt={config.alt} className="w-4 h-4" />
                 <SelectItemText>{config.name}</SelectItemText>
               </div>
             </SelectItem>
-          ))}
+            );
+            })}
         </SelectContent>
       </Select>
     </div>

@@ -10,6 +10,7 @@ type Props = {
   className?: string;
   variant?: 'dark' | 'light';
   keepAlive?: boolean;
+  logSession?: boolean;
   onActivity?: () => void;
 };
 
@@ -22,6 +23,7 @@ const TerminalPaneComponent: React.FC<Props> = ({
   className,
   variant = 'dark',
   keepAlive = false,
+  logSession = true,
   onActivity,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -159,6 +161,8 @@ const TerminalPaneComponent: React.FC<Props> = ({
           cols,
           rows,
           shell,
+          // Disable persistent logging when requested by caller
+          disableLog: !logSession,
         });
         if (!res?.ok) {
           term.writeln('\x1b[31mFailed to start PTY:\x1b[0m ' + (res as any)?.error);

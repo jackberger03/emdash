@@ -15,11 +15,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     env?: Record<string, string>;
     cols?: number;
     rows?: number;
+    disableLog?: boolean;
   }) => ipcRenderer.invoke('pty:start', opts),
   ptyInput: (args: { id: string; data: string }) => ipcRenderer.send('pty:input', args),
   ptyResize: (args: { id: string; cols: number; rows: number }) =>
     ipcRenderer.send('pty:resize', args),
   ptyKill: (id: string) => ipcRenderer.send('pty:kill', { id }),
+  cliWhich: (candidates: string[]) => ipcRenderer.invoke('cli:which', { candidates }),
 
   onPtyData: (id: string, listener: (data: string) => void) => {
     const channel = `pty:data:${id}`;

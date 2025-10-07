@@ -16,15 +16,18 @@ declare global {
         env?: Record<string, string>;
         cols?: number;
         rows?: number;
+        disableLog?: boolean;
       }) => Promise<{ ok: boolean }>;
       ptyInput: (args: { id: string; data: string }) => void;
       ptyResize: (args: { id: string; cols: number; rows?: number }) => void;
       ptyKill: (id: string) => void;
       onPtyData: (id: string, listener: (data: string) => void) => () => void;
+      onPtyHistory?: (id: string, listener: (data: string) => void) => () => void;
       onPtyExit: (
         id: string,
         listener: (info: { exitCode: number; signal?: number }) => void
       ) => () => void;
+      cliWhich?: (candidates: string[]) => Promise<{ ok: boolean; found?: string | null; error?: string }>;
 
       // Worktree management
       worktreeCreate: (args: {
@@ -298,15 +301,18 @@ export interface ElectronAPI {
     env?: Record<string, string>;
     cols?: number;
     rows?: number;
+    disableLog?: boolean;
   }) => Promise<{ ok: boolean }>;
   ptyInput: (args: { id: string; data: string }) => void;
   ptyResize: (args: { id: string; cols: number; rows?: number }) => void;
   ptyKill: (id: string) => void;
   onPtyData: (id: string, listener: (data: string) => void) => () => void;
+  onPtyHistory?: (id: string, listener: (data: string) => void) => () => void;
   onPtyExit: (
     id: string,
     listener: (info: { exitCode: number; signal?: number }) => void
   ) => () => void;
+  cliWhich?: (candidates: string[]) => Promise<{ ok: boolean; found?: string | null; error?: string }>;
 
   // Worktree management
   worktreeCreate: (args: {

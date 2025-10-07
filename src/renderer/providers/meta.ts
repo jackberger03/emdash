@@ -1,4 +1,12 @@
-export type UiProvider = 'codex' | 'claude' | 'droid' | 'gemini' | 'cursor';
+export type UiProvider =
+  | 'codex'
+  | 'claude'
+  | 'droid'
+  | 'gemini'
+  | 'cursor'
+  | 'warp'
+  | 'codex-cli'
+  | 'claude-cli';
 
 export type ProviderMeta = {
   label: string;
@@ -18,6 +26,13 @@ export const providerMeta: Record<UiProvider, ProviderMeta> = {
     label: 'Claude Code',
     icon: '../../assets/images/claude.png',
     terminalOnly: false,
+  },
+  'claude-cli': {
+    label: 'Claude (CLI)',
+    icon: '../../assets/images/claude.png',
+    terminalOnly: true,
+    cli: 'claude',
+    helpUrl: 'https://www.npmjs.com/package/@anthropic-ai/claude-code',
   },
   droid: {
     label: 'Droid',
@@ -39,5 +54,19 @@ export const providerMeta: Record<UiProvider, ProviderMeta> = {
     terminalOnly: true,
     cli: 'cursor-agent',
     helpUrl: 'https://cursor.com/install',
+  },
+  warp: {
+    label: 'Warp',
+    icon: '../../assets/images/warp.png',
+    terminalOnly: true,
+    cli: 'warp',
+    helpUrl: 'https://docs.warp.dev/developers/cli',
+  },
+  'codex-cli': {
+    label: 'Codex (CLI)',
+    icon: '../../assets/images/openai.png',
+    terminalOnly: true,
+    cli: 'codex',
+    helpUrl: 'https://github.com/openai/codex',
   },
 };

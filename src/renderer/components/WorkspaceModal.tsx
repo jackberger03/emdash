@@ -30,7 +30,7 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 }) => {
   const [workspaceName, setWorkspaceName] = useState('');
   const [initialPrompt, setInitialPrompt] = useState('');
-  const [selectedProvider, setSelectedProvider] = useState<Provider>('codex');
+  const [selectedProvider, setSelectedProvider] = useState<Provider>('codex-cli');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,7 +75,7 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
       );
       setWorkspaceName('');
       setInitialPrompt('');
-      setSelectedProvider('codex');
+      setSelectedProvider('codex-cli');
       setShowAdvanced(false);
       setError(null);
       onClose();
