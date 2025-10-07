@@ -39,6 +39,9 @@ Either download the DMG from Releases (or click the link above), or run the app 
 - One or more providers (install as needed):
   - [OpenAI Codex CLI](https://github.com/openai/codex) (install + authenticate)
   - Optional: [Claude Code CLI](https://www.npmjs.com/package/@anthropic-ai/claude-code) (install + authenticate)
+  - Optional: [Droid (Factory CLI)](https://github.com/factory-ai/droid) (install + authenticate)
+  - Optional: [Gemini CLI](https://github.com/google/generative-ai-cli) (install + authenticate)
+  - Optional: [Cursor CLI](https://cursor.sh/) (install + authenticate)
 - Optional: [GitHub CLI](https://docs.github.com/en/github-cli/github-cli/quickstart) for PRs, badges, and repo info
 
 ### Codex CLI
@@ -66,6 +69,40 @@ claude
 # then use /login inside the CLI
 ```
 
+### Droid (Factory CLI) (optional)
+
+Install the Droid CLI and authenticate it:
+
+```bash
+npm install -g @factory-ai/droid
+
+# authenticate
+droid login
+```
+
+### Gemini CLI (optional)
+
+Install the Gemini CLI and authenticate it:
+
+```bash
+npm install -g @google/generative-ai-cli
+
+# authenticate
+gemini auth login
+```
+
+### Cursor CLI (optional)
+
+Install the Cursor CLI and authenticate it:
+
+```bash
+# Install from Cursor website
+# Visit https://cursor.sh/ and download the CLI
+
+# authenticate
+cursor auth login
+```
+
 ### GitHub CLI
 
 Install and authenticate GitHub CLI for GitHub features:
@@ -85,13 +122,13 @@ gh auth login
 ## Getting Started
 
 1. Ensure Node.js 18+ and Git are installed
-2. Install and authenticate at least one provider (Codex or Claude Code)
+2. Install and authenticate at least one provider (Codex, Claude Code, Droid, Gemini, or Cursor CLI)
 3. (Optional) Install and authenticate [GitHub CLI](https://docs.github.com/en/github-cli/github-cli/quickstart)
 4. Clone this repository
 5. Install dependencies: `npm install`
 6. Run the app: `npm run dev`
 
-In the chat input, use the provider selector to switch between Codex and Claude Code. Once a chat has started with Codex or Claude, the provider is locked for that chat.
+In the chat input, use the provider selector to switch between available providers. Once a chat has started with a specific provider, the provider is locked for that chat.
 
 ## Demos
 
@@ -247,7 +284,7 @@ find "$HOME" -type f -name 'emdash.db*' -print
 
 ## What's Next
 
-- [ ] Additional providers (e.g., Gemini CLI, aider, Warp)
+- [ ] Additional providers (e.g., Warp, AMP)
 - [ ] Workspace lifecycle hooks to run custom scripts on create, run, and archive (e.g., install deps, copy env files, clean up resources)
 - [ ] Planning chat with controlled execution (draft actions in a separate chat, then run them one by one)
 - [ ] Linear integration to track and close out issues
