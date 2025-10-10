@@ -17,6 +17,7 @@ import cursorLogo from '../../assets/images/cursorlogo.png';
 import copilotLogo from '../../assets/images/ghcopilot.png';
 import ampLogo from '../../assets/images/ampcode.png';
 import opencodeLogo from '../../assets/images/opencode.png';
+import aiderLogo from '../../assets/images/aider.png';
 
 interface ProviderSelectorProps {
   value: Provider;
@@ -65,6 +66,11 @@ const providerConfig = {
     name: 'OpenCode',
     logo: opencodeLogo,
     alt: 'OpenCode CLI',
+  },
+  aider: {
+    name: 'Aider',
+    logo: aiderLogo,
+    alt: 'Aider CLI',
   },
 } as const;
 

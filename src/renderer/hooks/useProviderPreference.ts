@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-export type ProviderId = 'codex' | 'claude';
+export type ProviderId = 'codex' | 'claude' | 'aider';
 
 export function useProviderPreference(
   workspaceId: string,

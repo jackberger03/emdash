@@ -101,6 +101,7 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
           'copilot',
           'amp',
           'opencode',
+          'aider',
         ];
         if (locked && (validProviders as string[]).includes(locked)) {
           setProvider(locked as Provider);

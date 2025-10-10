@@ -53,4 +53,5 @@ export type Provider =
   | 'cursor'
   | 'copilot'
   | 'amp'
-  | 'opencode';
+  | 'opencode'
+  | 'aider';

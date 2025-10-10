@@ -6,7 +6,8 @@ export type UiProvider =
   | 'cursor'
   | 'copilot'
   | 'amp'
-  | 'opencode';
+  | 'opencode'
+  | 'aider';
 
 export type ProviderMeta = {
   label: string;
@@ -19,6 +20,15 @@ export type ProviderMeta = {
 };
 
 export const providerMeta: Record<UiProvider, ProviderMeta> = {
+  aider: {
+    label: 'Aider',
+    icon: '../../assets/images/aider.png',
+    terminalOnly: true,
+    cli: 'aider',
+    helpUrl: 'https://aider.chat/docs/',
+    idlePatterns: [/Ready|Awaiting|Press Enter/i, /Add files or prompt/i],
+    busyPatterns: [/Thinking|Working|Generating|Applying|Analyzing|Editing/i],
+  },
   opencode: {
     label: 'OpenCode',
     icon: '../../assets/images/opencode.png',
