@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useToast } from '../hooks/use-toast';
 import { useTheme } from '../hooks/useTheme';
 import { TerminalPane } from './TerminalPane';
@@ -34,9 +34,25 @@ interface Props {
   projectName: string;
   className?: string;
   initialProvider?: Provider;
+  paneId?: string; // Optional pane ID for split pane isolation
 }
 
-const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, initialProvider }) => {
+const ChatInterface: React.FC<Props> = ({
+  workspace,
+  projectName,
+  className,
+  initialProvider,
+  paneId,
+}) => {
+  // Use paneId if provided, otherwise use workspace.id for backwards compatibility
+  const effectiveWorkspaceId = paneId || workspace.id;
+
+  console.log('[ChatInterface] Mounted with:', {
+    workspaceId: workspace.id,
+    paneId,
+    effectiveWorkspaceId,
+    initialProvider
+  });
   const { toast } = useToast();
   const { effectiveTheme } = useTheme();
   const [inputValue, setInputValue] = useState('');
@@ -59,14 +75,14 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
     providerMeta.codex.terminalOnly
       ? null
       : {
-          workspaceId: workspace.id,
+          workspaceId: effectiveWorkspaceId,
           workspacePath: workspace.path,
         }
   );
 
   const claudeStream = useClaudeStream(
     provider === 'claude' && !providerMeta.claude.terminalOnly
-      ? { workspaceId: workspace.id, workspacePath: workspace.path }
+      ? { workspaceId: effectiveWorkspaceId, workspacePath: workspace.path }
       : null
   );
   const activeStream = provider === 'codex' ? codexStream : claudeStream;
@@ -74,15 +90,15 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
   useEffect(() => {
     initializedConversationRef.current = null;
     setCliStartFailed(false);
-  }, [workspace.id]);
+  }, [effectiveWorkspaceId]);
 
   // On workspace change, restore last-selected provider (including Droid).
   // If a locked provider exists (including Droid), prefer locked.
   // If initialProvider is provided, use it as the highest priority.
   useEffect(() => {
     try {
-      const lastKey = `provider:last:${workspace.id}`;
-      const lockedKey = `provider:locked:${workspace.id}`;
+      const lastKey = `provider:last:${effectiveWorkspaceId}`;
+      const lockedKey = `provider:locked:${effectiveWorkspaceId}`;
       const last = window.localStorage.getItem(lastKey) as Provider | null;
       const locked = window.localStorage.getItem(lockedKey) as Provider | null;
 
@@ -119,14 +135,14 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
     } catch {
       setProvider(initialProvider || 'codex');
     }
-  }, [workspace.id, initialProvider]);
+  }, [effectiveWorkspaceId, initialProvider]);
 
   // Persist last-selected provider per workspace (including Droid)
   useEffect(() => {
     try {
-      window.localStorage.setItem(`provider:last:${workspace.id}`, provider);
+      window.localStorage.setItem(`provider:last:${effectiveWorkspaceId}`, provider);
     } catch {}
-  }, [provider, workspace.id]);
+  }, [provider, effectiveWorkspaceId]);
 
   // When a chat becomes locked (first user message sent or terminal activity), persist the provider
   useEffect(() => {
@@ -143,13 +159,13 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
       const copilotLocked = provider === 'copilot' && hasCopilotActivity;
 
       if (userLocked || droidLocked || geminiLocked || cursorLocked || copilotLocked) {
-        window.localStorage.setItem(`provider:locked:${workspace.id}`, provider);
+        window.localStorage.setItem(`provider:locked:${effectiveWorkspaceId}`, provider);
         setLockedProvider(provider);
       }
     } catch {}
   }, [
     provider,
-    workspace.id,
+    effectiveWorkspaceId,
     activeStream.messages,
     hasDroidActivity,
     hasGeminiActivity,
@@ -191,21 +207,21 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
     return () => {
       cancelled = true;
     };
-  }, [provider, workspace.id]);
+  }, [provider, effectiveWorkspaceId]);
 
   // When switching providers, ensure other streams are stopped
   useEffect(() => {
     (async () => {
       try {
-        if (provider !== 'codex') await (window as any).electronAPI.codexStopStream?.(workspace.id);
+        if (provider !== 'codex') await (window as any).electronAPI.codexStopStream?.(effectiveWorkspaceId);
         if (provider !== 'claude')
           await (window as any).electronAPI.agentStopStream?.({
             providerId: 'claude',
-            workspaceId: workspace.id,
+            workspaceId: effectiveWorkspaceId,
           });
       } catch {}
     })();
-  }, [provider, workspace.id]);
+  }, [provider, effectiveWorkspaceId]);
 
   useEffect(() => {
     if (!codexStream.isReady) return;
@@ -399,7 +415,7 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
   }, [isTerminal, workspace.metadata]);
 
   useInitialPromptInjection({
-    workspaceId: workspace.id,
+    workspaceId: effectiveWorkspaceId,
     providerId: provider,
     prompt: initialInjection,
     enabled: isTerminal,
@@ -408,9 +424,57 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
   // Ensure a provider is stored for this workspace so fallbacks can subscribe immediately
   useEffect(() => {
     try {
-      localStorage.setItem(`workspaceProvider:${workspace.id}`, provider);
+      localStorage.setItem(`workspaceProvider:${effectiveWorkspaceId}`, provider);
     } catch {}
-  }, [provider, workspace.id]);
+  }, [provider, effectiveWorkspaceId]);
+
+  // Handler for switching providers - unlocks the provider and switches
+  const handleProviderChange = useCallback(
+    async (newProvider: Provider) => {
+      console.log('[ChatInterface] handleProviderChange START:', {
+        from: provider,
+        to: newProvider,
+        effectiveWorkspaceId
+      });
+
+      // Clear the locked provider state to allow switching
+      try {
+        window.localStorage.removeItem(`provider:locked:${effectiveWorkspaceId}`);
+        setLockedProvider(null);
+        console.log('[ChatInterface] Cleared locked provider');
+      } catch (err) {
+        console.error('[ChatInterface] Error clearing locked provider:', err);
+      }
+
+      // Stop any active streams
+      try {
+        console.log('[ChatInterface] Stopping streams...');
+        await (window as any).electronAPI.codexStopStream?.(effectiveWorkspaceId);
+        await (window as any).electronAPI.agentStopStream?.({
+          providerId: provider,
+          workspaceId: effectiveWorkspaceId,
+        });
+        console.log('[ChatInterface] Streams stopped');
+      } catch (err) {
+        console.error('[ChatInterface] Error stopping streams:', err);
+      }
+
+      // Reset activity flags
+      setHasDroidActivity(false);
+      setHasGeminiActivity(false);
+      setHasCursorActivity(false);
+      setHasCopilotActivity(false);
+      setCliStartFailed(false);
+      console.log('[ChatInterface] Activity flags reset');
+
+      // Switch to the new provider
+      // React will handle unmounting the old TerminalPane and mounting the new one
+      console.log('[ChatInterface] Setting new provider:', newProvider);
+      setProvider(newProvider);
+      console.log('[ChatInterface] handleProviderChange END');
+    },
+    [effectiveWorkspaceId, provider]
+  );
 
   return (
     <div className={`flex h-full flex-col bg-white dark:bg-gray-800 ${className}`}>
@@ -459,13 +523,13 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
               }`}
             >
               <TerminalPane
-                id={`${provider}-main-${workspace.id}`}
+                id={`${provider}-main-${effectiveWorkspaceId}`}
                 cwd={workspace.path}
                 shell={providerMeta[provider].cli}
-                keepAlive={true}
+                keepAlive={false}
                 onActivity={() => {
                   try {
-                    window.localStorage.setItem(`provider:locked:${workspace.id}`, provider);
+                    window.localStorage.setItem(`provider:locked:${effectiveWorkspaceId}`, provider);
                     setLockedProvider(provider);
                   } catch {}
                 }}
@@ -531,7 +595,12 @@ const ChatInterface: React.FC<Props> = ({ workspace, projectName, className, ini
       )}
 
       {isTerminal ? (
-        <ProviderBar provider={provider} linearIssue={workspace.metadata?.linearIssue || null} />
+        <ProviderBar
+          provider={provider}
+          linearIssue={workspace.metadata?.linearIssue || null}
+          onProviderChange={handleProviderChange}
+          allowChange={true}
+        />
       ) : null}
     </div>
   );

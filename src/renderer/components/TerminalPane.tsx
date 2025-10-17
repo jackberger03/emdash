@@ -38,6 +38,8 @@ const TerminalPaneComponent: React.FC<Props> = ({
   const disposeFns = useRef<Array<() => void>>([]);
 
   useEffect(() => {
+    console.log('[TerminalPane] useEffect START:', { id, cwd, shell, keepAlive });
+
     const el = containerRef.current;
     if (!el) {
       log.error('TerminalPane: No container element found');
@@ -131,11 +133,24 @@ const TerminalPaneComponent: React.FC<Props> = ({
     const sanitizeEchoArtifacts = (chunk: string) => {
       try {
         // Strip common terminal response artifacts that sometimes get echoed by TTY in cooked mode
-        // Examples observed: "1;2c" (DA response) and similar patterns.
         // 1) Remove proper ANSI DA responses if they appear in output stream
         let s = chunk.replace(/\x1b\[\?\d+(?:;\d+)*c/g, '');
         // 2) Remove bare echoed fragments like "1;2c" or "24;80R" when ESC sequences were stripped by echo
         s = s.replace(/(^|[\s>])\d+(?:;\d+)*[cR](?=$|\s)/g, '$1');
+
+        // 3) Aggressively remove OSC color query responses
+        // These patterns match the background/foreground color queries (OSC 10, 11, etc.)
+        // Remove complete sequences: 10;rgb:0000/0000/0000 or 11;rgb:ffff/ffff/ffff
+        s = s.replace(/\d+;rgb:[0-9a-fA-F]+\/[0-9a-fA-F]+\/[0-9a-fA-F]+/g, '');
+        // Remove partial sequences at start/end: rgb:ffff/ffff or just ffff after rgb pattern
+        s = s.replace(/rgb:[0-9a-fA-F]+(?:\/[0-9a-fA-F]+)*/g, '');
+        // Remove trailing hex fragments that look like color components (4 hex digits)
+        s = s.replace(/(?:^|\s)([0-9a-fA-F]{4})(?=\s|$)/g, ' ');
+        // Remove OSC with escape sequences
+        s = s.replace(/\x1b\]\d+;[^\x07\x1b]*\x07?/g, '');
+        // Clean up multiple spaces/newlines that might be left
+        s = s.replace(/\n\s*\n/g, '\n');
+
         return s;
       } catch {
         return chunk;
@@ -184,6 +199,7 @@ const TerminalPaneComponent: React.FC<Props> = ({
     const startTsRef = { current: Date.now() } as { current: number };
     (async () => {
       try {
+        console.log('[TerminalPane] Starting PTY:', { id, cwd, shell });
         const res = await window.electronAPI.ptyStart({
           id,
           cwd,
@@ -191,6 +207,7 @@ const TerminalPaneComponent: React.FC<Props> = ({
           rows,
           shell,
         });
+        console.log('[TerminalPane] PTY start result:', { id, ok: res?.ok, error: (res as any)?.error });
         if (!res?.ok) {
           term.writeln('\x1b[31mFailed to start PTY:\x1b[0m ' + (res as any)?.error);
           try {
@@ -198,11 +215,13 @@ const TerminalPaneComponent: React.FC<Props> = ({
           } catch {}
         }
         if (res?.ok) {
+          console.log('[TerminalPane] PTY started successfully:', id);
           try {
             onStartSuccess && onStartSuccess();
           } catch {}
         }
       } catch (e: any) {
+        console.error('[TerminalPane] Error starting PTY:', { id, error: e });
         term.writeln('\x1b[31mError starting PTY:\x1b[0m ' + (e?.message || String(e)));
         try {
           onStartError && onStartError(e?.message || String(e));
@@ -211,12 +230,18 @@ const TerminalPaneComponent: React.FC<Props> = ({
     })();
 
     return () => {
+      console.log('[TerminalPane] Cleanup START:', { id, keepAlive });
       if (!keepAlive) {
+        console.log('[TerminalPane] Killing PTY:', id);
         window.electronAPI.ptyKill(id);
+        console.log('[TerminalPane] PTY kill called:', id);
+      } else {
+        console.log('[TerminalPane] Skipping PTY kill (keepAlive=true):', id);
       }
       disposeFns.current.forEach((fn) => fn());
       term.dispose();
       termRef.current = null;
+      console.log('[TerminalPane] Cleanup END:', id);
     };
   }, [id, cwd, cols, rows, variant, keepAlive, shell]);
 

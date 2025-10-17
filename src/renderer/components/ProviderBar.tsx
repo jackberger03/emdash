@@ -1,5 +1,5 @@
-import React from 'react';
-import { ExternalLink } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { ExternalLink, ChevronDown } from 'lucide-react';
 import { type Provider } from '../types';
 import { type LinearIssueSummary } from '../types/linear';
 import openaiLogo from '../../assets/images/openai.png';
@@ -16,9 +16,36 @@ import charmLogo from '../../assets/images/charm.png';
 import qwenLogo from '../../assets/images/qwen.png';
 import augmentLogo from '../../assets/images/augmentcode.png';
 
-type Props = { provider: Provider; linearIssue?: LinearIssueSummary | null };
+type Props = {
+  provider: Provider;
+  linearIssue?: LinearIssueSummary | null;
+  onProviderChange?: (provider: Provider) => void;
+  allowChange?: boolean;
+};
 
-export const ProviderBar: React.FC<Props> = ({ provider, linearIssue }) => {
+export const ProviderBar: React.FC<Props> = ({
+  provider,
+  linearIssue,
+  onProviderChange,
+  allowChange = true,
+}) => {
+  const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showDropdown]);
+
   const map = {
     qwen: { name: 'Qwen Code', logo: qwenLogo },
     codex: { name: 'Codex', logo: openaiLogo },
@@ -32,20 +59,51 @@ export const ProviderBar: React.FC<Props> = ({ provider, linearIssue }) => {
     charm: { name: 'Charm', logo: charmLogo },
     auggie: { name: 'Auggie', logo: augmentLogo },
   } as const;
+
+  const allProviders: Provider[] = [
+    'qwen',
+    'codex',
+    'claude',
+    'droid',
+    'gemini',
+    'cursor',
+    'copilot',
+    'amp',
+    'opencode',
+    'charm',
+    'auggie',
+  ];
+
   const cfg = map[provider] ?? { name: provider, logo: '' };
+
+  const handleProviderSelect = (newProvider: Provider) => {
+    setShowDropdown(false);
+    if (onProviderChange && newProvider !== provider) {
+      onProviderChange(newProvider);
+    }
+  };
+
   return (
     <div className="px-6 pb-6 pt-4">
       <div className="mx-auto max-w-4xl">
-        <div className="relative rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+        <div
+          ref={dropdownRef}
+          className="relative rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+        >
           <div className="flex items-center rounded-md px-4 py-3">
             <div className="flex items-center gap-3">
               <TooltipProvider delayDuration={250}>
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <div
-                      className="inline-flex h-7 cursor-default select-none items-center gap-1.5 rounded-md border border-gray-200 bg-gray-100 px-2 text-xs text-foreground dark:border-gray-700 dark:bg-gray-700"
-                      role="button"
-                      aria-disabled
+                    <button
+                      type="button"
+                      className={`inline-flex h-7 items-center gap-1.5 rounded-md border border-gray-200 bg-gray-100 px-2 text-xs text-foreground dark:border-gray-700 dark:bg-gray-700 ${
+                        allowChange && onProviderChange
+                          ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600'
+                          : 'cursor-default'
+                      }`}
+                      onClick={() => allowChange && onProviderChange && setShowDropdown(!showDropdown)}
+                      disabled={!allowChange || !onProviderChange}
                       title={cfg.name}
                     >
                       {cfg.logo ? (
@@ -64,13 +122,52 @@ export const ProviderBar: React.FC<Props> = ({ provider, linearIssue }) => {
                         </div>
                       )}
                       <span className="max-w-[12rem] truncate font-medium">{cfg.name}</span>
-                    </div>
+                      {allowChange && onProviderChange && (
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      )}
+                    </button>
                   </TooltipTrigger>
                   <TooltipContent>
-                    <p>Provider is locked for this conversation.</p>
+                    <p>
+                      {allowChange && onProviderChange
+                        ? 'Click to switch provider'
+                        : 'Provider is locked for this conversation.'}
+                    </p>
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
+
+              {showDropdown && allowChange && onProviderChange && (
+                <div className="absolute bottom-full left-0 z-50 mb-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                  <div className="max-h-64 overflow-y-auto p-1">
+                    {allProviders.map((p) => {
+                      const providerConfig = map[p];
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          className={`flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                            p === provider ? 'bg-gray-100 dark:bg-gray-700' : ''
+                          }`}
+                          onClick={() => handleProviderSelect(p)}
+                        >
+                          {providerConfig.logo && (
+                            <img
+                              src={providerConfig.logo}
+                              alt={providerConfig.name}
+                              className="h-4 w-4 rounded object-contain"
+                            />
+                          )}
+                          <span className="flex-1">{providerConfig.name}</span>
+                          {p === provider && (
+                            <span className="text-xs text-muted-foreground">✓</span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {linearIssue ? (
                 <TooltipProvider delayDuration={250}>
