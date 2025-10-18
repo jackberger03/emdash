@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './ui/resizable';
+import { ImperativePanelGroupHandle } from 'react-resizable-panels';
 import ChatInterface from './ChatInterface';
 import { type Provider } from '../types';
 
@@ -68,6 +69,8 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
   });
   const [focusedPaneId, setFocusedPaneId] = useState<string>(`${workspace.id}-chat-0`);
   const nextIdRef = useRef(1);
+  const panelGroupRefs = useRef<Map<string, ImperativePanelGroupHandle>>(new Map());
+  const [layoutVersion, setLayoutVersion] = useState(0);
 
   const generatePaneId = useCallback(() => {
     const id = `${workspace.id}-chat-${nextIdRef.current}`;
@@ -79,9 +82,15 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
     (direction: SplitDirection) => {
       const newPaneId = generatePaneId();
 
-      const splitNode = (node: PaneNode, targetId: string): PaneNode => {
+      const splitNode = (node: PaneNode, targetId: string, parentSplit?: SplitNode): PaneNode => {
         if (node.type === 'chat') {
           if (node.id === targetId) {
+            // Check if parent is a split with the same direction
+            if (parentSplit && parentSplit.direction === direction) {
+              // We'll handle this at the parent level
+              return node;
+            }
+
             // Split this chat pane
             return {
               type: 'split',
@@ -98,16 +107,42 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
           }
           return node;
         } else {
-          // It's a split node, recurse into children
+          // It's a split node
+          // Check if we're splitting a direct child of this split with the same direction
+          if (node.direction === direction) {
+            const childIndex = node.children.findIndex((child) => {
+              if (child.type === 'chat') {
+                return child.id === targetId;
+              }
+              return false;
+            });
+
+            if (childIndex !== -1) {
+              // Found the target child - insert new pane after it
+              const newChildren = [...node.children];
+              newChildren.splice(childIndex + 1, 0, {
+                type: 'chat',
+                id: newPaneId,
+                provider: (node.children[childIndex] as ChatPaneNode).provider,
+              });
+              return {
+                ...node,
+                children: newChildren,
+              };
+            }
+          }
+
+          // Recurse into children
           return {
             ...node,
-            children: node.children.map((child) => splitNode(child, targetId)),
+            children: node.children.map((child) => splitNode(child, targetId, node)),
           };
         }
       };
 
       setLayout((prev) => splitNode(prev, focusedPaneId));
       setFocusedPaneId(newPaneId);
+      setLayoutVersion((v) => v + 1);
     },
     [focusedPaneId, generatePaneId]
   );
@@ -170,7 +205,57 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
       }
       return prev;
     });
+
+    setLayoutVersion((v) => v + 1);
   }, [focusedPaneId, generatePaneId, initialProvider]);
+
+  const balanceAllPanes = useCallback(() => {
+    // Collect all panel group refs and balance them
+    const refsToBalance = Array.from(panelGroupRefs.current.values());
+
+    // Balance multiple times to handle nested splits
+    const balanceOnce = () => {
+      refsToBalance.forEach((groupRef) => {
+        try {
+          const panelIds = groupRef.getLayout();
+          if (panelIds.length > 0) {
+            const equalSize = 100 / panelIds.length;
+            const layout = new Array(panelIds.length).fill(equalSize);
+            groupRef.setLayout(layout);
+          }
+        } catch (e) {
+          console.error('Error balancing panel:', e);
+        }
+      });
+    };
+
+    // Balance repeatedly to handle nested structures
+    requestAnimationFrame(() => {
+      balanceOnce();
+      requestAnimationFrame(() => {
+        balanceOnce();
+        setTimeout(() => balanceOnce(), 100);
+      });
+    });
+  }, []);
+
+  // Auto-balance when layout changes
+  useEffect(() => {
+    if (layoutVersion > 0) {
+      // Multiple balance attempts with different timings to handle nested splits
+      const timer1 = setTimeout(() => balanceAllPanes(), 10);
+      const timer2 = setTimeout(() => balanceAllPanes(), 50);
+      const timer3 = setTimeout(() => balanceAllPanes(), 150);
+      const timer4 = setTimeout(() => balanceAllPanes(), 300);
+
+      return () => {
+        clearTimeout(timer1);
+        clearTimeout(timer2);
+        clearTimeout(timer3);
+        clearTimeout(timer4);
+      };
+    }
+  }, [layoutVersion, balanceAllPanes]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -187,15 +272,19 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
           // Cmd+W: Close pane
           e.preventDefault();
           closePane();
+        } else if (e.key === '=' || e.key === '+') {
+          // Cmd+= or Cmd++: Balance all panes
+          e.preventDefault();
+          balanceAllPanes();
         }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [splitPane, closePane]);
+  }, [splitPane, closePane, balanceAllPanes]);
 
-  const renderNode = (node: PaneNode): React.ReactElement => {
+  const renderNode = (node: PaneNode, parentKey: string = 'root'): React.ReactElement => {
     if (node.type === 'chat') {
       return (
         <div
@@ -213,12 +302,41 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
       );
     } else {
       // It's a split node
+      const groupId = `${parentKey}-split-${node.direction}`;
+      const childCount = node.children.length;
+      const equalSize = 100 / childCount;
+
       return (
-        <ResizablePanelGroup direction={node.direction} className="h-full">
+        <ResizablePanelGroup
+          direction={node.direction}
+          className="h-full"
+          ref={(ref) => {
+            if (ref) {
+              panelGroupRefs.current.set(groupId, ref);
+              // Aggressively balance this group multiple times
+              [10, 50, 100, 150, 250].forEach((delay) => {
+                setTimeout(() => {
+                  try {
+                    const currentLayout = ref.getLayout();
+                    if (currentLayout.length > 0) {
+                      const equalSize = 100 / currentLayout.length;
+                      const balancedLayout = new Array(currentLayout.length).fill(equalSize);
+                      ref.setLayout(balancedLayout);
+                    }
+                  } catch (e) {
+                    // Ref might be unmounted
+                  }
+                }, delay);
+              });
+            } else {
+              panelGroupRefs.current.delete(groupId);
+            }
+          }}
+        >
           {node.children.map((child, index) => (
-            <React.Fragment key={index}>
-              <ResizablePanel defaultSize={100 / node.children.length} minSize={10}>
-                {renderNode(child)}
+            <React.Fragment key={`${groupId}-panel-${index}`}>
+              <ResizablePanel defaultSize={equalSize} minSize={10}>
+                {renderNode(child, `${groupId}-child${index}`)}
               </ResizablePanel>
               {index < node.children.length - 1 && (
                 <ResizableHandle withHandle className="bg-border hover:bg-blue-500" />
