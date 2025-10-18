@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Button } from './ui/button';
 import { Spinner } from './ui/spinner';
-import { X, Settings2, Cable } from 'lucide-react';
+import { X, Settings2, Cable, RefreshCw } from 'lucide-react';
 import VersionCard from './VersionCard';
 import IntegrationsCard from './IntegrationsCard';
 import CliProvidersList, { BASE_CLI_PROVIDERS } from './CliProvidersList';
@@ -56,6 +56,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
   );
   const [cliError, setCliError] = useState<string | null>(null);
   const [cliLoading, setCliLoading] = useState<boolean>(false);
+  const [hasLoadedCli, setHasLoadedCli] = useState<boolean>(false);
   const shouldReduceMotion = useReducedMotion();
 
   useEffect(() => {
@@ -92,6 +93,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       const result = await window.electronAPI.getCliProviders();
       if (result?.success && Array.isArray(result.providers)) {
         setCliProviders(mergeCliProviders(result.providers));
+        setHasLoadedCli(true);
       } else {
         setCliError(result?.error || 'Failed to detect CLI providers.');
       }
@@ -102,6 +104,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       setCliLoading(false);
     }
   }, []);
+
+  // Auto-load CLI providers once when connections tab is first accessed
+  useEffect(() => {
+    if (isOpen && activeTab === 'connections' && !hasLoadedCli && !cliLoading) {
+      fetchCliProviders();
+    }
+  }, [isOpen, activeTab, hasLoadedCli, cliLoading, fetchCliProviders]);
 
   const tabDetails = useMemo(() => {
     return {
@@ -125,31 +134,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           { title: 'Integrations', render: () => <IntegrationsCard /> },
           {
             title: 'CLI providers',
+            action: (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={fetchCliProviders}
+                disabled={cliLoading}
+                aria-busy={cliLoading}
+                aria-label="Refresh CLI providers"
+              >
+                {cliLoading ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+              </Button>
+            ),
             render: () => (
-              <div className="space-y-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={fetchCliProviders}
-                  disabled={cliLoading}
-                  aria-busy={cliLoading}
-                >
-                  {cliLoading ? (
-                    <>
-                      <Spinner size="sm" className="mr-2" />
-                      Detecting…
-                    </>
-                  ) : (
-                    'Detect CLIs'
-                  )}
-                </Button>
-                <CliProvidersList
-                  providers={cliProviders}
-                  isLoading={cliLoading}
-                  error={cliError}
-                />
-              </div>
+              <CliProvidersList providers={cliProviders} isLoading={cliLoading} error={cliError} />
             ),
           },
         ],
