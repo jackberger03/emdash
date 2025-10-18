@@ -1,4 +1,4 @@
-import { spawnSync } from 'child_process';
+import { spawn } from 'child_process';
 import { codexService } from './CodexService';
 
 export type CliStatusCode = 'connected' | 'missing' | 'needs_key' | 'error';
@@ -115,18 +115,22 @@ const CLI_DEFINITIONS: CliDefinition[] = [
 
 class ConnectionsService {
   async getCliProviders(): Promise<CliProviderStatus[]> {
-    const results: CliProviderStatus[] = [];
+    const startTime = Date.now();
+    console.log('[ConnectionsService] Starting CLI provider detection...');
 
-    for (const definition of CLI_DEFINITIONS) {
-      const status = await this.buildStatus(definition);
-      results.push(status);
-    }
+    // Run all checks in parallel for better performance
+    const results = await Promise.all(
+      CLI_DEFINITIONS.map((definition) => this.buildStatus(definition))
+    );
+
+    const duration = Date.now() - startTime;
+    console.log(`[ConnectionsService] CLI detection completed in ${duration}ms`);
 
     return results;
   }
 
   private async buildStatus(def: CliDefinition): Promise<CliProviderStatus> {
-    const commandResult = this.tryCommands(def);
+    const commandResult = await this.tryCommands(def);
     const status = await this.resolveStatus(def, commandResult);
     const message = this.resolveMessage(def, commandResult, status);
 
@@ -196,9 +200,9 @@ class ConnectionsService {
     return null;
   }
 
-  private tryCommands(def: CliDefinition): CommandResult {
+  private async tryCommands(def: CliDefinition): Promise<CommandResult> {
     for (const command of def.commands) {
-      const result = this.runCommand(command, def.args ?? ['--version']);
+      const result = await this.runCommand(command, def.args ?? ['--version']);
       if (result.success) {
         return result;
       }
@@ -213,39 +217,70 @@ class ConnectionsService {
     return this.runCommand(def.commands[def.commands.length - 1], def.args ?? ['--version']);
   }
 
-  private runCommand(command: string, args: string[]): CommandResult {
-    try {
-      const child = spawnSync(command, args, {
-        encoding: 'utf8',
-        timeout: 2000,
-        maxBuffer: 1024 * 1024,
-      });
+  private async runCommand(command: string, args: string[]): Promise<CommandResult> {
+    return new Promise((resolve) => {
+      try {
+        const child = spawn(command, args);
 
-      const stdout = (child.stdout || '').toString();
-      const stderr = (child.stderr || '').toString();
-      const success = child.error == null && child.status === 0;
-      const version = this.extractVersion(stdout) || this.extractVersion(stderr);
+        let stdout = '';
+        let stderr = '';
+        let didTimeout = false;
 
-      return {
-        command,
-        success,
-        error: child.error ?? undefined,
-        stdout,
-        stderr,
-        status: child.status,
-        version,
-      };
-    } catch (error) {
-      return {
-        command,
-        success: false,
-        error: error as Error,
-        stdout: '',
-        stderr: '',
-        status: null,
-        version: null,
-      };
-    }
+        // timeout for version checks
+        const timeoutId = setTimeout(() => {
+          didTimeout = true;
+          child.kill();
+        }, 2000);
+
+        child.stdout?.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        child.stderr?.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        child.on('error', (error) => {
+          clearTimeout(timeoutId);
+          resolve({
+            command,
+            success: false,
+            error,
+            stdout: stdout || '',
+            stderr: stderr || '',
+            status: null,
+            version: null,
+          });
+        });
+
+        child.on('close', (code) => {
+          clearTimeout(timeoutId);
+
+          const success = !didTimeout && code === 0;
+          const version = this.extractVersion(stdout) || this.extractVersion(stderr);
+
+          resolve({
+            command,
+            success,
+            error: didTimeout ? new Error('Command timeout') : undefined,
+            stdout,
+            stderr,
+            status: code,
+            version,
+          });
+        });
+      } catch (error) {
+        resolve({
+          command,
+          success: false,
+          error: error as Error,
+          stdout: '',
+          stderr: '',
+          status: null,
+          version: null,
+        });
+      }
+    });
   }
 
   private extractVersion(output: string): string | null {
