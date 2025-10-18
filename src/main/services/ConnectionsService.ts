@@ -204,7 +204,7 @@ class ConnectionsService {
       }
 
       // If the command exists but returned a non-zero status, still return result for diagnostics
-      if (result.error && (result.error as any).code !== 'ENOENT') {
+      if (result.error && (result.error as NodeJS.ErrnoException).code !== 'ENOENT') {
         return result;
       }
     }
