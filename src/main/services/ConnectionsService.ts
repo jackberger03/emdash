@@ -115,17 +115,10 @@ const CLI_DEFINITIONS: CliDefinition[] = [
 
 class ConnectionsService {
   async getCliProviders(): Promise<CliProviderStatus[]> {
-    const startTime = Date.now();
-    console.log('[ConnectionsService] Starting CLI provider detection...');
-
     // Run all checks in parallel for better performance
     const results = await Promise.all(
       CLI_DEFINITIONS.map((definition) => this.buildStatus(definition))
     );
-
-    const duration = Date.now() - startTime;
-    console.log(`[ConnectionsService] CLI detection completed in ${duration}ms`);
-
     return results;
   }
 
