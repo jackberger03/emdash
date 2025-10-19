@@ -182,6 +182,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveWorkspace: (workspace: any) => ipcRenderer.invoke('db:saveWorkspace', workspace),
   deleteProject: (projectId: string) => ipcRenderer.invoke('db:deleteProject', projectId),
   deleteWorkspace: (workspaceId: string) => ipcRenderer.invoke('db:deleteWorkspace', workspaceId),
+  updateWorkspaceLayout: (workspaceId: string, layout: any) =>
+    ipcRenderer.invoke('db:updateWorkspaceLayout', workspaceId, layout),
+  getWorkspaceLayout: (workspaceId: string) =>
+    ipcRenderer.invoke('db:getWorkspaceLayout', workspaceId),
 
   // Conversation management
   saveConversation: (conversation: any) => ipcRenderer.invoke('db:saveConversation', conversation),

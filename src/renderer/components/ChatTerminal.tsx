@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { log } from '../lib/logger';
 
@@ -10,15 +10,18 @@ type Props = {
   shell?: string;
   className?: string;
   variant?: 'dark' | 'light';
-  themeOverride?: any; // optional xterm theme overrides
-  contentFilter?: string; // CSS filter applied to terminal content container
-  keepAlive?: boolean;
+  themeOverride?: any;
+  contentFilter?: string;
   onActivity?: () => void;
   onStartError?: (message: string) => void;
   onStartSuccess?: () => void;
 };
 
-const TerminalPaneComponent: React.FC<Props> = ({
+/**
+ * ChatTerminal - Terminal specifically for AI agent/chat usage
+ * Does NOT clear prompt or add command dividers like regular terminals
+ */
+const ChatTerminalComponent: React.FC<Props> = ({
   id,
   cwd,
   cols = 80,
@@ -28,7 +31,6 @@ const TerminalPaneComponent: React.FC<Props> = ({
   variant = 'dark',
   themeOverride,
   contentFilter,
-  keepAlive = false,
   onActivity,
   onStartError,
   onStartSuccess,
@@ -38,15 +40,15 @@ const TerminalPaneComponent: React.FC<Props> = ({
   const disposeFns = useRef<Array<() => void>>([]);
 
   useEffect(() => {
-    console.log('[TerminalPane] useEffect START:', { id, cwd, shell, keepAlive });
+    console.log('[ChatTerminal] useEffect START:', { id, cwd, shell });
 
     const el = containerRef.current;
     if (!el) {
-      log.error('TerminalPane: No container element found');
+      log.error('ChatTerminal: No container element found');
       return;
     }
 
-    log.debug('TerminalPane: Creating terminal, container dimensions:', {
+    log.debug('ChatTerminal: Creating terminal, container dimensions:', {
       width: el.offsetWidth,
       height: el.offsetHeight,
       clientWidth: el.clientWidth,
@@ -56,7 +58,6 @@ const TerminalPaneComponent: React.FC<Props> = ({
     const isLight = variant === 'light';
     const baseTheme = isLight
       ? {
-          // Light theme defaults
           background: '#ffffff',
           foreground: '#000000',
           cursor: '#000000',
@@ -79,7 +80,6 @@ const TerminalPaneComponent: React.FC<Props> = ({
           brightWhite: '#111827',
         }
       : {
-          // Dark theme defaults
           background: '#1f2937',
           foreground: '#ffffff',
           cursor: '#ffffff',
@@ -118,39 +118,12 @@ const TerminalPaneComponent: React.FC<Props> = ({
     term.focus();
     setTimeout(() => term.focus(), 0);
 
-    // Track command executions for visual separation
-    let commandCount = 0;
-    let pendingDivider: NodeJS.Timeout | null = null;
-
-    const insertCommandDivider = () => {
-      commandCount++;
-      // Subtle divider with command number
-      const divider = `\x1b[2m\x1b[38;5;240m─── #${commandCount} ${'─'.repeat(50)}\x1b[0m`;
-      term.write(`\r\n${divider}\r\n`);
-    };
-
+    // NO command dividers for chat terminal - agents need raw output
     const keyDisp = term.onData((data) => {
       log.debug('xterm onData', JSON.stringify(data));
       try {
         onActivity && onActivity();
       } catch {}
-
-      // Detect Enter key to mark command execution
-      const isEnter = data === '\r' || data === '\n' || data === '\r\n';
-
-      if (isEnter) {
-        // Clear any pending divider
-        if (pendingDivider) {
-          clearTimeout(pendingDivider);
-        }
-
-        // Schedule a divider after command output settles
-        pendingDivider = setTimeout(() => {
-          insertCommandDivider();
-          pendingDivider = null;
-        }, 1000); // Wait 1 second after Enter to add divider
-      }
-
       window.electronAPI.ptyInput({ id, data });
     });
 
@@ -158,28 +131,15 @@ const TerminalPaneComponent: React.FC<Props> = ({
       log.debug('xterm onKey', ev.key);
     });
 
-    // Listen for history first, then live data, then start/attach to PTY
     const sanitizeEchoArtifacts = (chunk: string) => {
       try {
-        // Strip common terminal response artifacts that sometimes get echoed by TTY in cooked mode
-        // 1) Remove proper ANSI DA responses if they appear in output stream
         let s = chunk.replace(/\x1b\[\?\d+(?:;\d+)*c/g, '');
-        // 2) Remove bare echoed fragments like "1;2c" or "24;80R" when ESC sequences were stripped by echo
         s = s.replace(/(^|[\s>])\d+(?:;\d+)*[cR](?=$|\s)/g, '$1');
-
-        // 3) Aggressively remove OSC color query responses
-        // These patterns match the background/foreground color queries (OSC 10, 11, etc.)
-        // Remove complete sequences: 10;rgb:0000/0000/0000 or 11;rgb:ffff/ffff/ffff
         s = s.replace(/\d+;rgb:[0-9a-fA-F]+\/[0-9a-fA-F]+\/[0-9a-fA-F]+/g, '');
-        // Remove partial sequences at start/end: rgb:ffff/ffff or just ffff after rgb pattern
         s = s.replace(/rgb:[0-9a-fA-F]+(?:\/[0-9a-fA-F]+)*/g, '');
-        // Remove trailing hex fragments that look like color components (4 hex digits)
         s = s.replace(/(?:^|\s)([0-9a-fA-F]{4})(?=\s|$)/g, ' ');
-        // Remove OSC with escape sequences
         s = s.replace(/\x1b\]\d+;[^\x07\x1b]*\x07?/g, '');
-        // Clean up multiple spaces/newlines that might be left
         s = s.replace(/\n\s*\n/g, '\n');
-
         return s;
       } catch {
         return chunk;
@@ -194,13 +154,13 @@ const TerminalPaneComponent: React.FC<Props> = ({
     });
     const offExit = window.electronAPI.onPtyExit(id, (info) => {
       try {
-        // If the process exits very quickly after start, it's likely the CLI wasn't found
         const elapsed = Date.now() - startTsRef.current;
         if (elapsed < 1500 && onStartError) {
           onStartError(`PTY exited early (code ${info?.exitCode ?? 'n/a'})`);
         }
       } catch {}
     });
+
     const handleResize = () => {
       if (termRef.current && el) {
         // Skip resize if element is hidden (display: none or 0 dimensions)
@@ -234,11 +194,10 @@ const TerminalPaneComponent: React.FC<Props> = ({
     disposeFns.current.push(() => keyDisp2.dispose());
     disposeFns.current.push(() => resizeObserver.disconnect());
 
-    // Start PTY session after listeners are attached so we don't miss initial output/history
     const startTsRef = { current: Date.now() } as { current: number };
     (async () => {
       try {
-        console.log('[TerminalPane] Starting PTY:', { id, cwd, shell });
+        console.log('[ChatTerminal] Starting PTY:', { id, cwd, shell });
 
         const res = await window.electronAPI.ptyStart({
           id,
@@ -247,34 +206,29 @@ const TerminalPaneComponent: React.FC<Props> = ({
           rows,
           shell,
         });
-        console.log('[TerminalPane] PTY start result:', {
+
+        console.log('[ChatTerminal] PTY start result:', {
           id,
           ok: res?.ok,
           error: (res as any)?.error,
         });
+
         if (!res?.ok) {
           term.writeln('\x1b[31mFailed to start PTY:\x1b[0m ' + (res as any)?.error);
           try {
             onStartError && onStartError((res as any)?.error || 'Failed to start PTY');
           } catch {}
         }
+
         if (res?.ok) {
-          console.log('[TerminalPane] PTY started successfully:', id);
-
-          // Inject minimal prompt command after shell starts
-          // Small delay to ensure shell is ready
-          setTimeout(() => {
-            // Empty prompt - just cursor, no text
-            const promptCmd = 'PROMPT=""; clear\n';
-            window.electronAPI.ptyInput({ id, data: promptCmd });
-          }, 150);
-
+          console.log('[ChatTerminal] PTY started successfully:', id);
+          // NO prompt clearing for chat terminals - AI agents need the real shell
           try {
             onStartSuccess && onStartSuccess();
           } catch {}
         }
       } catch (e: any) {
-        console.error('[TerminalPane] Error starting PTY:', { id, error: e });
+        console.error('[ChatTerminal] Error starting PTY:', { id, error: e });
         term.writeln('\x1b[31mError starting PTY:\x1b[0m ' + (e?.message || String(e)));
         try {
           onStartError && onStartError(e?.message || String(e));
@@ -283,26 +237,15 @@ const TerminalPaneComponent: React.FC<Props> = ({
     })();
 
     return () => {
-      console.log('[TerminalPane] Cleanup START:', { id, keepAlive });
-
-      // Clean up pending divider timer
-      if (pendingDivider) {
-        clearTimeout(pendingDivider);
-      }
-
-      if (!keepAlive) {
-        console.log('[TerminalPane] Killing PTY:', id);
-        window.electronAPI.ptyKill(id);
-        console.log('[TerminalPane] PTY kill called:', id);
-      } else {
-        console.log('[TerminalPane] Skipping PTY kill (keepAlive=true):', id);
-      }
+      console.log('[ChatTerminal] Cleanup START:', id);
+      // Always kill chat terminal PTYs on unmount
+      window.electronAPI.ptyKill(id);
       disposeFns.current.forEach((fn) => fn());
       term.dispose();
       termRef.current = null;
-      console.log('[TerminalPane] Cleanup END:', id);
+      console.log('[ChatTerminal] Cleanup END:', id);
     };
-  }, [id, cwd, cols, rows, variant, keepAlive, shell]);
+  }, [id]); // Only remount when terminal ID changes, not on prop changes
 
   return (
     <div
@@ -318,7 +261,6 @@ const TerminalPaneComponent: React.FC<Props> = ({
       onClick={() => termRef.current?.focus()}
       onMouseDown={() => termRef.current?.focus()}
       onDragOver={(e) => {
-        // Allow dropping files onto the terminal surface
         e.preventDefault();
       }}
       onDrop={(e) => {
@@ -333,13 +275,10 @@ const TerminalPaneComponent: React.FC<Props> = ({
             if (p) paths.push(p);
           }
           if (paths.length === 0) return;
-          // Insert absolute paths (quoted) into the PTY, separated by spaces
           const escaped = paths.map((p) => `'${p.replace(/'/g, "'\\''")}'`).join(' ');
           window.electronAPI.ptyInput({ id, data: escaped });
           termRef.current?.focus();
-        } catch {
-          // ignore
-        }
+        } catch {}
       }}
     >
       <div
@@ -356,6 +295,6 @@ const TerminalPaneComponent: React.FC<Props> = ({
   );
 };
 
-export const TerminalPane = React.memo(TerminalPaneComponent);
+export const ChatTerminal = React.memo(ChatTerminalComponent);
 
-export default TerminalPane;
+export default ChatTerminal;

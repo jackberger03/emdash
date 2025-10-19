@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from './components/ui/button';
 
 import { FolderOpen } from 'lucide-react';
@@ -14,6 +14,7 @@ import { useToast } from './hooks/use-toast';
 import { useGithubAuth } from './hooks/useGithubAuth';
 import { useTheme } from './hooks/useTheme';
 import { ThemeProvider } from './components/ThemeProvider';
+import { TerminalRegistryProvider } from './contexts/TerminalRegistry';
 import emdashLogo from '../assets/images/emdash/emdash_logo.svg';
 import emdashLogoWhite from '../assets/images/emdash/emdash_logo_white.svg';
 import Titlebar from './components/titlebar/Titlebar';
@@ -1031,6 +1032,33 @@ const AppContent: React.FC = () => {
     });
   };
 
+  // Track all workspaces that have been activated to keep their ChatInterfaces alive
+  const [activatedWorkspaces, setActivatedWorkspaces] = useState<Set<string>>(new Set());
+
+  // Add workspace to activated set when it becomes active
+  useEffect(() => {
+    if (activeWorkspace?.id && selectedProject) {
+      setActivatedWorkspaces((prev) => {
+        const next = new Set(prev);
+        next.add(activeWorkspace.id);
+        console.log('[App] activatedWorkspaces updated:', Array.from(next));
+        return next;
+      });
+    }
+  }, [activeWorkspace?.id, selectedProject?.id]);
+
+  // Memoize workspace lookup to prevent unnecessary re-renders
+  // Build cache from ALL projects to support cross-project keep-alive
+  const workspaceCache = useMemo(() => {
+    const cache = new Map<string, Workspace>();
+    projects.forEach((project) => {
+      project.workspaces?.forEach((ws) => {
+        cache.set(ws.id, ws);
+      });
+    });
+    return cache;
+  }, [projects]);
+
   const renderMainContent = () => {
     if (showHomeView) {
       return (
@@ -1041,7 +1069,7 @@ const AppContent: React.FC = () => {
                 <div className="logo-shimmer-container">
                   <img
                     key={effectiveTheme}
-                    src={effectiveTheme === 'dark' ? emdashLogoWhite : emdashLogo}
+                    src={effectiveTheme === 'light' ? emdashLogo : emdashLogoWhite}
                     alt="emdash"
                     className="logo-shimmer-image"
                   />
@@ -1049,8 +1077,8 @@ const AppContent: React.FC = () => {
                     className="logo-shimmer-overlay"
                     aria-hidden="true"
                     style={{
-                      WebkitMaskImage: `url(${effectiveTheme === 'dark' ? emdashLogoWhite : emdashLogo})`,
-                      maskImage: `url(${effectiveTheme === 'dark' ? emdashLogoWhite : emdashLogo})`,
+                      WebkitMaskImage: `url(${effectiveTheme === 'light' ? emdashLogo : emdashLogoWhite})`,
+                      maskImage: `url(${effectiveTheme === 'light' ? emdashLogo : emdashLogoWhite})`,
                       WebkitMaskRepeat: 'no-repeat',
                       maskRepeat: 'no-repeat',
                       WebkitMaskSize: 'contain',
@@ -1090,12 +1118,38 @@ const AppContent: React.FC = () => {
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {activeWorkspace ? (
             <ErrorBoundary>
-              <SplitChatPane
-                workspace={activeWorkspace}
-                projectName={selectedProject.name}
-                className="min-h-0 flex-1"
-                initialProvider={activeWorkspaceProvider || undefined}
-              />
+              {/* Render ALL activated workspaces, but only show the active one */}
+              {Array.from(activatedWorkspaces).map((workspaceId) => {
+                const workspace = workspaceCache.get(workspaceId);
+                if (!workspace) return null;
+
+                const isActive = workspace.id === activeWorkspace.id;
+
+                console.log('[App] Rendering workspace:', {
+                  workspaceId: workspace.id,
+                  isActive,
+                  activeWorkspaceId: activeWorkspace.id,
+                });
+
+                return (
+                  <div
+                    key={workspace.id}
+                    style={{ display: isActive ? 'block' : 'none' }}
+                    className="min-h-0 flex-1"
+                  >
+                    <SplitChatPane
+                      workspace={workspace}
+                      projectName={selectedProject.name}
+                      className="min-h-0 flex-1"
+                      initialProvider={
+                        workspace.id === activeWorkspace.id
+                          ? activeWorkspaceProvider || undefined
+                          : undefined
+                      }
+                    />
+                  </div>
+                );
+              })}
             </ErrorBoundary>
           ) : (
             <ProjectMainView
@@ -1119,7 +1173,7 @@ const AppContent: React.FC = () => {
             <div className="mb-4 flex items-center justify-center">
               <img
                 key={effectiveTheme}
-                src={effectiveTheme === 'dark' ? emdashLogoWhite : emdashLogo}
+                src={effectiveTheme === 'light' ? emdashLogo : emdashLogoWhite}
                 alt="emdash"
                 className="h-16"
               />
@@ -1246,7 +1300,9 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ThemeProvider>
-      <AppContent />
+      <TerminalRegistryProvider>
+        <AppContent />
+      </TerminalRegistryProvider>
     </ThemeProvider>
   );
 };

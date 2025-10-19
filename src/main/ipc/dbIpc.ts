@@ -121,4 +121,24 @@ export function registerDatabaseIpc() {
       return { success: false, error: (error as Error).message };
     }
   });
+
+  ipcMain.handle('db:updateWorkspaceLayout', async (_, workspaceId: string, layout: any) => {
+    try {
+      await databaseService.updateWorkspaceLayout(workspaceId, layout);
+      return { success: true };
+    } catch (error) {
+      log.error('Failed to update workspace layout:', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
+
+  ipcMain.handle('db:getWorkspaceLayout', async (_, workspaceId: string) => {
+    try {
+      const layout = await databaseService.getWorkspaceLayout(workspaceId);
+      return { success: true, layout };
+    } catch (error) {
+      log.error('Failed to get workspace layout:', error);
+      return { success: false, error: (error as Error).message };
+    }
+  });
 }

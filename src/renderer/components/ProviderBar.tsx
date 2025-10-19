@@ -103,19 +103,24 @@ export const ProviderBar: React.FC<Props> = ({
       <div className="mx-auto max-w-4xl">
         <div
           ref={dropdownRef}
-          className={`relative rounded-md border border-gray-200 bg-white shadow-lg transition-all duration-200 dark:border-gray-700 dark:bg-gray-800 ${
+          className={`relative rounded-md border border-border bg-card shadow-lg transition-all duration-200 ${
             showTerminal ? 'h-64' : ''
           }`}
         >
-          {/* Terminal Section - Shows when expanded */}
-          {showTerminal && workspaceId && workspacePath && (
-            <div className="h-48 overflow-hidden border-b border-gray-200 p-3 dark:border-gray-700">
+          {/* Terminal Section - Always mounted but hidden when not visible to preserve state and keep PTY running */}
+          {workspaceId && workspacePath && (
+            <div
+              className={`h-48 overflow-hidden border-b border-border p-3 ${
+                showTerminal ? 'block' : 'hidden'
+              }`}
+            >
               <TerminalPane
                 id={`${workspaceId}-provider-terminal`}
                 cwd={workspacePath}
                 variant={theme}
                 className="h-full w-full"
                 rows={10}
+                keepAlive={true}
               />
             </div>
           )}
@@ -127,9 +132,9 @@ export const ProviderBar: React.FC<Props> = ({
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className={`inline-flex h-7 items-center gap-1.5 rounded-md border border-gray-200 bg-gray-100 px-2 text-xs text-foreground dark:border-gray-700 dark:bg-gray-700 ${
+                      className={`inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-secondary px-2 text-xs text-foreground ${
                         allowChange && onProviderChange
-                          ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600'
+                          ? 'cursor-pointer hover:bg-secondary/80'
                           : 'cursor-default'
                       }`}
                       onClick={() =>
@@ -170,7 +175,7 @@ export const ProviderBar: React.FC<Props> = ({
               </TooltipProvider>
 
               {showDropdown && allowChange && onProviderChange && (
-                <div className="absolute bottom-full left-0 z-50 mb-1 w-48 rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                <div className="absolute bottom-full left-0 z-50 mb-1 w-48 rounded-md border border-border bg-card shadow-lg">
                   <div className="max-h-64 overflow-y-auto p-1">
                     {allProviders.map((p) => {
                       const providerConfig = map[p];
@@ -178,8 +183,8 @@ export const ProviderBar: React.FC<Props> = ({
                         <button
                           key={p}
                           type="button"
-                          className={`flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 ${
-                            p === provider ? 'bg-gray-100 dark:bg-gray-700' : ''
+                          className={`flex w-full items-center gap-2 rounded px-3 py-2 text-left text-sm hover:bg-muted ${
+                            p === provider ? 'bg-muted' : ''
                           }`}
                           onClick={() => handleProviderSelect(p)}
                         >
@@ -293,8 +298,8 @@ export const ProviderBar: React.FC<Props> = ({
               {/* Folder and Branch Info */}
               {(folderName || branch) && (
                 <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                  {folderName && <span className="font-medium">{folderName}</span>}
-                  {folderName && branch && <span>•</span>}
+                  {folderName && <span className="max-w-[200px] truncate font-medium" title={folderName}>{folderName}</span>}
+                  {folderName && branch && <span className="flex-shrink-0">•</span>}
                   {branch && (
                     <span className="flex items-center gap-1">
                       <svg
@@ -326,7 +331,7 @@ export const ProviderBar: React.FC<Props> = ({
                         className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors ${
                           showTerminal
                             ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-300'
-                            : 'border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                            : 'border-border bg-secondary text-secondary-foreground hover:bg-secondary/80'
                         }`}
                         onClick={() => setShowTerminal(!showTerminal)}
                         title={showTerminal ? 'Hide Terminal' : 'Show Terminal'}

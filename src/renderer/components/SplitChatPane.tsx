@@ -44,17 +44,29 @@ const PaneWrapper: React.FC<{
   projectName: string;
   provider?: Provider;
   className?: string;
-}> = ({ workspace, paneId, projectName, provider, className }) => {
-  return (
-    <ChatInterface
-      workspace={workspace}
-      projectName={projectName}
-      className={className}
-      initialProvider={provider}
-      paneId={paneId}
-    />
-  );
-};
+}> = React.memo(
+  ({ workspace, paneId, projectName, provider, className }) => {
+    return (
+      <ChatInterface
+        workspace={workspace}
+        projectName={projectName}
+        className={className}
+        initialProvider={provider}
+        paneId={paneId}
+      />
+    );
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison to prevent unnecessary re-renders
+    return (
+      prevProps.paneId === nextProps.paneId &&
+      prevProps.workspace.id === nextProps.workspace.id &&
+      prevProps.projectName === nextProps.projectName &&
+      prevProps.provider === nextProps.provider &&
+      prevProps.className === nextProps.className
+    );
+  }
+);
 
 export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
   workspace,
@@ -239,6 +251,63 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
     });
   }, []);
 
+  // Load saved layout on mount
+  useEffect(() => {
+    const loadSavedLayout = async () => {
+      try {
+        const result = await (window as any).electronAPI.getWorkspaceLayout(workspace.id);
+        if (result.success && result.layout) {
+          console.log('[SplitChatPane] Loaded saved layout:', result.layout);
+          setLayout(result.layout);
+
+          // Update nextIdRef to be higher than any existing ID
+          const findMaxId = (node: PaneNode): number => {
+            if (node.type === 'chat') {
+              const match = node.id.match(/-chat-(\d+)$/);
+              return match ? parseInt(match[1], 10) : 0;
+            } else {
+              return Math.max(...node.children.map(findMaxId));
+            }
+          };
+          const maxId = findMaxId(result.layout);
+          nextIdRef.current = maxId + 1;
+
+          // Find and set first chat pane as focused
+          const findFirstChat = (node: PaneNode): string | null => {
+            if (node.type === 'chat') return node.id;
+            for (const child of node.children) {
+              const found = findFirstChat(child);
+              if (found) return found;
+            }
+            return null;
+          };
+          const firstChatId = findFirstChat(result.layout);
+          if (firstChatId) {
+            setFocusedPaneId(firstChatId);
+          }
+        }
+      } catch (error) {
+        console.error('[SplitChatPane] Failed to load layout:', error);
+      }
+    };
+
+    loadSavedLayout();
+  }, [workspace.id]);
+
+  // Save layout whenever it changes (debounced)
+  useEffect(() => {
+    const saveTimer = setTimeout(async () => {
+      try {
+        await (window as any).electronAPI.updateWorkspaceLayout(workspace.id, layout);
+        console.log('[SplitChatPane] Saved layout to DB');
+      } catch (error) {
+        console.error('[SplitChatPane] Failed to save layout:', error);
+      }
+    }, 1000); // Debounce for 1 second
+
+    return () => clearTimeout(saveTimer);
+  }, [layout, workspace.id]);
+
   // Auto-balance when layout changes
   useEffect(() => {
     if (layoutVersion > 0) {
@@ -288,6 +357,7 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
     if (node.type === 'chat') {
       return (
         <div
+          key={node.id}
           className={`relative h-full ${focusedPaneId === node.id ? 'ring-2 ring-inset ring-blue-500' : 'ring-1 ring-inset ring-gray-200'}`}
           onClick={() => setFocusedPaneId(node.id)}
         >

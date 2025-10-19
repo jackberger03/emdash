@@ -100,7 +100,9 @@ export function registerPtyIpc(): void {
     try {
       resizePty(args.id, args.cols, args.rows);
     } catch (e) {
-      log.error('pty:resize error', e);
+      // Resize errors are expected when terminals are hidden or closed
+      // Log as debug instead of error to avoid console spam
+      log.debug('pty:resize skipped (terminal likely hidden or closed)', { id: args.id, error: e });
     }
   });
 

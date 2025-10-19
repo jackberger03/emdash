@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useToast } from '../hooks/use-toast';
 import { useTheme } from '../hooks/useTheme';
-import { TerminalPane } from './TerminalPane';
+import { ChatTerminal } from './ChatTerminal';
 import { TerminalModeBanner } from './TerminalModeBanner';
 import { WorkspaceNotice } from './WorkspaceNotice';
 import { providerMeta } from '../providers/meta';
@@ -385,6 +385,30 @@ const ChatInterface: React.FC<Props> = ({
 
   const isTerminal = providerMeta[provider]?.terminalOnly === true;
 
+  // Track all providers used in this pane to keep their terminals alive
+  const [usedProviders, setUsedProviders] = useState<Set<Provider>>(new Set([provider]));
+
+  // Add new providers to the set when they're selected
+  useEffect(() => {
+    if (isTerminal) {
+      setUsedProviders((prev) => {
+        if (prev.has(provider)) return prev;
+        const next = new Set(prev);
+        next.add(provider);
+        console.log('[ChatInterface] Added provider:', provider, 'to pane:', effectiveWorkspaceId);
+        return next;
+      });
+    }
+  }, [provider, isTerminal, effectiveWorkspaceId]);
+
+  console.log('[ChatInterface] Render:', {
+    workspaceId: workspace.id,
+    effectiveWorkspaceId,
+    provider,
+    isTerminal,
+    usedProviders: Array.from(usedProviders),
+  });
+
   const initialInjection = useMemo(() => {
     if (!isTerminal) return null;
     const md = workspace.metadata || null;
@@ -469,7 +493,7 @@ const ChatInterface: React.FC<Props> = ({
       console.log('[ChatInterface] Activity flags reset');
 
       // Switch to the new provider
-      // React will handle unmounting the old TerminalPane and mounting the new one
+      // React will handle unmounting the old ChatTerminal and mounting the new one
       console.log('[ChatInterface] Setting new provider:', newProvider);
       setProvider(newProvider);
       console.log('[ChatInterface] handleProviderChange END');
@@ -478,7 +502,7 @@ const ChatInterface: React.FC<Props> = ({
   );
 
   return (
-    <div className={`flex h-full flex-col bg-white dark:bg-gray-800 ${className}`}>
+    <div className={`flex h-full flex-col bg-background ${className}`}>
       {isTerminal ? (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="px-6 pt-4">
@@ -520,41 +544,70 @@ const ChatInterface: React.FC<Props> = ({
           <div className="mt-4 min-h-0 flex-1 px-6">
             <div
               className={`mx-auto h-full max-w-4xl overflow-hidden rounded-md ${
-                provider === 'charm' ? (effectiveTheme === 'dark' ? 'bg-gray-800' : 'bg-white') : ''
+                provider === 'charm'
+                  ? effectiveTheme === 'lightsout'
+                    ? 'bg-black'
+                    : effectiveTheme === 'light'
+                    ? 'bg-white'
+                    : 'bg-gray-800'
+                  : ''
               }`}
             >
-              <TerminalPane
-                id={`${provider}-main-${effectiveWorkspaceId}`}
-                cwd={workspace.path}
-                shell={providerMeta[provider].cli}
-                keepAlive={false}
-                onActivity={() => {
-                  try {
-                    window.localStorage.setItem(
-                      `provider:locked:${effectiveWorkspaceId}`,
-                      provider
-                    );
-                    setLockedProvider(provider);
-                  } catch {}
-                }}
-                onStartError={() => {
-                  // Mark CLI missing or failed to launch
-                  setCliStartFailed(true);
-                }}
-                onStartSuccess={() => setCliStartFailed(false)}
-                variant={effectiveTheme === 'dark' ? 'dark' : 'light'}
-                themeOverride={
-                  provider === 'charm'
-                    ? { background: effectiveTheme === 'dark' ? '#1f2937' : '#ffffff' }
-                    : undefined
-                }
-                contentFilter={
-                  provider === 'charm' && effectiveTheme !== 'dark'
-                    ? 'invert(1) hue-rotate(180deg) brightness(1.1) contrast(1.05)'
-                    : undefined
-                }
-                className="h-full w-full"
-              />
+              {/* Render terminals for all providers used in this pane */}
+              {Array.from(usedProviders).map((p) => {
+                const isActive = p === provider;
+                console.log('[ChatInterface] Rendering terminal for provider:', {
+                  provider: p,
+                  isActive,
+                  terminalId: `chat-${effectiveWorkspaceId}-${p}`,
+                });
+
+                return (
+                  <div
+                    key={p}
+                    style={{ display: isActive ? 'block' : 'none' }}
+                    className="h-full w-full"
+                  >
+                    <ChatTerminal
+                      id={`chat-${effectiveWorkspaceId}-${p}`}
+                      cwd={workspace.path}
+                      shell={providerMeta[p].cli}
+                      onActivity={() => {
+                        try {
+                          window.localStorage.setItem(`provider:locked:${effectiveWorkspaceId}`, p);
+                          if (isActive) {
+                            setLockedProvider(p);
+                          }
+                        } catch {}
+                      }}
+                      onStartError={() => {
+                        if (isActive) {
+                          setCliStartFailed(true);
+                        }
+                      }}
+                      onStartSuccess={() => {
+                        if (isActive) {
+                          setCliStartFailed(false);
+                        }
+                      }}
+                      variant={effectiveTheme === 'light' ? 'light' : 'dark'}
+                      themeOverride={
+                        effectiveTheme === 'lightsout'
+                          ? { background: '#000000' }
+                          : p === 'charm'
+                          ? { background: effectiveTheme === 'dark' ? '#1f2937' : '#ffffff' }
+                          : undefined
+                      }
+                      contentFilter={
+                        p === 'charm' && effectiveTheme === 'light'
+                          ? 'invert(1) hue-rotate(180deg) brightness(1.1) contrast(1.05)'
+                          : undefined
+                      }
+                      className="h-full w-full"
+                    />
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -605,7 +658,7 @@ const ChatInterface: React.FC<Props> = ({
         allowChange={isTerminal ? true : !providerLocked}
         workspaceId={workspace.id}
         workspacePath={workspace.path}
-        theme={effectiveTheme === 'dark' ? 'dark' : 'light'}
+        theme={effectiveTheme === 'light' ? 'light' : 'dark'}
         branch={workspace.branch}
       />
     </div>

@@ -587,6 +587,86 @@ export class DatabaseService {
     });
   }
 
+  async updateWorkspaceLayout(workspaceId: string, layout: any): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      // First, get the current metadata
+      this.db!.get(
+        'SELECT metadata FROM workspaces WHERE id = ?',
+        [workspaceId],
+        (err, row: any) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          if (!row) {
+            reject(new Error(`Workspace ${workspaceId} not found`));
+            return;
+          }
+
+          // Parse existing metadata or create new object
+          let metadata: any = {};
+          if (row.metadata) {
+            try {
+              metadata = JSON.parse(row.metadata);
+            } catch (e) {
+              console.warn('Failed to parse workspace metadata, creating new object');
+              metadata = {};
+            }
+          }
+
+          // Update layout in metadata
+          metadata.layout = layout;
+
+          // Save back to database
+          this.db!.run(
+            'UPDATE workspaces SET metadata = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+            [JSON.stringify(metadata), workspaceId],
+            (err) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            }
+          );
+        }
+      );
+    });
+  }
+
+  async getWorkspaceLayout(workspaceId: string): Promise<any | null> {
+    if (!this.db) throw new Error('Database not initialized');
+
+    return new Promise((resolve, reject) => {
+      this.db!.get(
+        'SELECT metadata FROM workspaces WHERE id = ?',
+        [workspaceId],
+        (err, row: any) => {
+          if (err) {
+            reject(err);
+            return;
+          }
+
+          if (!row || !row.metadata) {
+            resolve(null);
+            return;
+          }
+
+          try {
+            const metadata = JSON.parse(row.metadata);
+            resolve(metadata.layout || null);
+          } catch (e) {
+            console.warn('Failed to parse workspace metadata');
+            resolve(null);
+          }
+        }
+      );
+    });
+  }
+
   async close(): Promise<void> {
     if (!this.db) return;
 

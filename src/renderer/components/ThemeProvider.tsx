@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
-type Theme = 'light' | 'dark' | 'system';
+type Theme = 'light' | 'dark' | 'lightsout' | 'system';
 
 const STORAGE_KEY = 'emdash-theme';
 
@@ -13,7 +13,7 @@ function getStoredTheme(): Theme {
   if (typeof window === 'undefined') return 'system';
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'light' || stored === 'dark' || stored === 'system') {
+    if (stored === 'light' || stored === 'dark' || stored === 'lightsout' || stored === 'system') {
       return stored;
     }
   } catch {
@@ -28,29 +28,33 @@ function applyTheme(theme: Theme) {
   const root = document.documentElement;
   const effectiveTheme = theme === 'system' ? getSystemTheme() : theme;
 
+  // Remove all theme classes first
+  root.classList.remove('dark', 'lights-out');
+
+  // Apply the appropriate theme class
   if (effectiveTheme === 'dark') {
     root.classList.add('dark');
-  } else {
-    root.classList.remove('dark');
+  } else if (effectiveTheme === 'lightsout') {
+    root.classList.add('lights-out');
   }
 }
 
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
-  effectiveTheme: 'light' | 'dark';
+  effectiveTheme: 'light' | 'dark' | 'lightsout';
 }
 
 export const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() =>
-    theme === 'system' ? getSystemTheme() : theme
+  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark' | 'lightsout'>(() =>
+    theme === 'system' ? getSystemTheme() : (theme as 'light' | 'dark' | 'lightsout')
   );
 
   useEffect(() => {
-    const newEffectiveTheme = theme === 'system' ? getSystemTheme() : theme;
+    const newEffectiveTheme = theme === 'system' ? getSystemTheme() : (theme as 'light' | 'dark' | 'lightsout');
     setEffectiveTheme(newEffectiveTheme);
     applyTheme(theme);
 
