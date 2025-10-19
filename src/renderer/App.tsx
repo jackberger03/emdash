@@ -47,6 +47,7 @@ const AppKeyboardShortcuts: React.FC<AppKeyboardShortcutsProps> = ({
 }) => {
   const { toggle: toggleLeftSidebar } = useSidebar();
   const { toggle: toggleRightSidebar } = useRightSidebar();
+  const { toggleTheme } = useTheme();
 
   // Single global keyboard shortcuts handler
   useKeyboardShortcuts({
@@ -54,6 +55,7 @@ const AppKeyboardShortcuts: React.FC<AppKeyboardShortcutsProps> = ({
     onOpenSettings: handleOpenSettings,
     onToggleLeftSidebar: toggleLeftSidebar,
     onToggleRightSidebar: toggleRightSidebar,
+    onToggleTheme: toggleTheme,
     onCloseModal: showCommandPalette
       ? handleCloseCommandPalette
       : showSettings
@@ -89,6 +91,7 @@ const CommandPaletteWrapper: React.FC<CommandPaletteWrapperProps> = ({
 }) => {
   const { toggle: toggleLeftSidebar } = useSidebar();
   const { toggle: toggleRightSidebar } = useRightSidebar();
+  const { toggleTheme } = useTheme();
 
   return (
     <CommandPalette
@@ -110,6 +113,7 @@ const CommandPaletteWrapper: React.FC<CommandPaletteWrapperProps> = ({
       onOpenSettings={handleOpenSettings}
       onToggleLeftSidebar={toggleLeftSidebar}
       onToggleRightSidebar={toggleRightSidebar}
+      onToggleTheme={toggleTheme}
       onGoHome={handleGoHome}
       onOpenProject={handleOpenProject}
     />

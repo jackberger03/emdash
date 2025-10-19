@@ -44,6 +44,9 @@ export interface GlobalShortcutHandlers {
   onToggleLeftSidebar?: () => void;
   onToggleRightSidebar?: () => void;
 
+  // Theme
+  onToggleTheme?: () => void;
+
   // State checks
   isCommandPaletteOpen?: boolean;
   isSettingsOpen?: boolean;

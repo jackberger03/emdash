@@ -38,6 +38,7 @@ function applyTheme(theme: Theme) {
 interface ThemeContextType {
   theme: Theme;
   setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
   effectiveTheme: 'light' | 'dark';
 }
 
@@ -82,8 +83,12 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return () => mediaQuery.removeListener(handler);
   }, [theme]);
 
+  const toggleTheme = () => {
+    setThemeState((current) => (current === 'dark' ? 'light' : 'dark'));
+  };
+
   return (
-    <ThemeContext.Provider value={{ theme, setTheme: setThemeState, effectiveTheme }}>
+    <ThemeContext.Provider value={{ theme, setTheme: setThemeState, toggleTheme, effectiveTheme }}>
       {children}
     </ThemeContext.Provider>
   );
