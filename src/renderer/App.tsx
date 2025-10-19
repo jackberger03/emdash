@@ -7,6 +7,7 @@ import ProjectMainView from './components/ProjectMainView';
 import WorkspaceModal from './components/WorkspaceModal';
 import SplitChatPane from './components/SplitChatPane';
 import { Toaster } from './components/ui/toaster';
+import useUpdateNotifier from './hooks/useUpdateNotifier';
 import RequirementsNotice from './components/RequirementsNotice';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { useToast } from './hooks/use-toast';
@@ -172,6 +173,9 @@ const AppContent: React.FC = () => {
   // Show agent requirements block if none of the supported CLIs are detected locally.
   // We only actively detect Codex and Claude Code; Factory (Droid) docs are shown as an alternative.
   const showAgentRequirement = isCodexInstalled === false && isClaudeInstalled === false;
+
+  // Show toast on update availability and kick off a background check
+  useUpdateNotifier({ checkOnMount: true, onOpenSettings: () => setShowSettings(true) });
 
   const defaultPanelLayout = React.useMemo(() => {
     const stored = loadPanelSizes(PANEL_LAYOUT_STORAGE_KEY, DEFAULT_PANEL_LAYOUT);

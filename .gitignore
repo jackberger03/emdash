@@ -58,3 +58,6 @@ Thumbs.db
 CLAUDE.md
 AGENTS.md
 .notes/
+
+# Local generated worktrees for perf experiments
+worktrees/
