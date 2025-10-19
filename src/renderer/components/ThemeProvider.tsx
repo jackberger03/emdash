@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useEffect, useState, type ReactNode } from 'react';
 
 type Theme = 'light' | 'dark' | 'system';
 
@@ -46,15 +46,12 @@ export const ThemeContext = createContext<ThemeContextType | undefined>(undefine
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(getStoredTheme);
-  const [effectiveTheme, setEffectiveTheme] = useState<'light' | 'dark'>(() =>
-    theme === 'system' ? getSystemTheme() : theme
-  );
+  const [systemTheme, setSystemTheme] = useState<'light' | 'dark'>(getSystemTheme);
+
+  const effectiveTheme = theme === 'system' ? systemTheme : theme;
 
   useEffect(() => {
-    const newEffectiveTheme = theme === 'system' ? getSystemTheme() : theme;
-    setEffectiveTheme(newEffectiveTheme);
     applyTheme(theme);
-
     try {
       localStorage.setItem(STORAGE_KEY, theme);
     } catch {
@@ -67,9 +64,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const handler = () => {
-      const newEffectiveTheme = getSystemTheme();
-      setEffectiveTheme(newEffectiveTheme);
-      applyTheme('system');
+      setSystemTheme(getSystemTheme());
     };
 
     // Modern browsers
