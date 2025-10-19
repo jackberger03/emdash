@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import type { ShortcutConfig, GlobalShortcutHandlers } from '../types/shortcuts';
+import type { ShortcutConfig, GlobalShortcutHandlers, ShortcutMapping } from '../types/shortcuts';
 
 /**
  * ==============================================================================
@@ -105,70 +105,92 @@ export function hasShortcutConflict(shortcut1: ShortcutConfig, shortcut2: Shortc
  */
 export function useKeyboardShortcuts(handlers: GlobalShortcutHandlers) {
   useEffect(() => {
+    // Build dynamic shortcut mappings from config
+    const shortcuts: ShortcutMapping[] = [
+      {
+        config: APP_SHORTCUTS.COMMAND_PALETTE,
+        handler: () => handlers.onToggleCommandPalette?.(),
+        priority: 'global',
+      },
+      {
+        config: APP_SHORTCUTS.SETTINGS,
+        handler: () => handlers.onOpenSettings?.(),
+        priority: 'global',
+        requiresClosed: true, // Can be triggered from modal
+      },
+      {
+        config: APP_SHORTCUTS.TOGGLE_LEFT_SIDEBAR,
+        handler: () => handlers.onToggleLeftSidebar?.(),
+        priority: 'global',
+        requiresClosed: true,
+      },
+      {
+        config: APP_SHORTCUTS.TOGGLE_RIGHT_SIDEBAR,
+        handler: () => handlers.onToggleRightSidebar?.(),
+        priority: 'global',
+        requiresClosed: true,
+      },
+      {
+        config: APP_SHORTCUTS.CLOSE_MODAL,
+        handler: () => handlers.onCloseModal?.(),
+        priority: 'modal',
+      },
+    ];
+
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
-      const hasModifier = event.metaKey || event.ctrlKey;
 
-      // Priority 1: Modal Escape (if any modal is open)
-      if (key === 'escape') {
-        if (handlers.isCommandPaletteOpen || handlers.isSettingsOpen) {
+      for (const shortcut of shortcuts) {
+        const shortcutKey = shortcut.config.key.toLowerCase();
+        const keyMatches = key === shortcutKey;
+
+        if (!keyMatches) continue;
+
+        // Check modifier requirements
+        const modifierRequired =
+          shortcut.config.modifier === 'cmd' || shortcut.config.modifier === 'ctrl';
+        const hasModifier = event.metaKey || event.ctrlKey;
+
+        if (modifierRequired && !hasModifier) continue;
+        if (!modifierRequired && hasModifier) continue;
+
+        // Handle priority and modal state
+        const isModalOpen = handlers.isCommandPaletteOpen || handlers.isSettingsOpen;
+
+        // Modal-priority shortcuts (like Escape) only work when modal is open
+        if (shortcut.priority === 'modal' && !isModalOpen) continue;
+
+        // Global shortcuts
+        if (shortcut.priority === 'global') {
+          // Command palette toggle always works
+          if (shortcut.config.key === APP_SHORTCUTS.COMMAND_PALETTE.key) {
+            event.preventDefault();
+            shortcut.handler();
+            return;
+          }
+
+          // Other shortcuts: if modal is open and they can close it
+          if (isModalOpen && shortcut.requiresClosed) {
+            event.preventDefault();
+            handlers.onCloseModal?.();
+            setTimeout(() => shortcut.handler(), 100);
+            return;
+          }
+
+          // Normal execution when no modal is open
+          if (!isModalOpen) {
+            event.preventDefault();
+            shortcut.handler();
+            return;
+          }
+        }
+
+        // Execute modal shortcuts
+        if (shortcut.priority === 'modal') {
           event.preventDefault();
-          handlers.onCloseModal?.();
+          shortcut.handler();
           return;
         }
-      }
-
-      // Only handle Cmd/Ctrl shortcuts below this point
-      if (!hasModifier) return;
-
-      // Priority 2: Command Palette Toggle (Cmd+K)
-      if (key === 'k') {
-        event.preventDefault();
-        handlers.onToggleCommandPalette?.();
-        return;
-      }
-
-      // Priority 3: Modal shortcuts (when modals are open, they intercept)
-      if (handlers.isCommandPaletteOpen) {
-        // Command palette is open - it handles its own shortcuts
-        if (key === ',') {
-          event.preventDefault();
-          handlers.onCloseModal?.();
-          setTimeout(() => handlers.onOpenSettings?.(), 100);
-          return;
-        }
-        if (key === 'b') {
-          event.preventDefault();
-          handlers.onCloseModal?.();
-          setTimeout(() => handlers.onToggleLeftSidebar?.(), 100);
-          return;
-        }
-        if (key === '.') {
-          event.preventDefault();
-          handlers.onCloseModal?.();
-          setTimeout(() => handlers.onToggleRightSidebar?.(), 100);
-          return;
-        }
-        return; // Prevent other shortcuts when command palette is open
-      }
-
-      // Priority 4: Global shortcuts (when no modal is open)
-      if (key === ',') {
-        event.preventDefault();
-        handlers.onOpenSettings?.();
-        return;
-      }
-
-      if (key === 'b') {
-        event.preventDefault();
-        handlers.onToggleLeftSidebar?.();
-        return;
-      }
-
-      if (key === '.') {
-        event.preventDefault();
-        handlers.onToggleRightSidebar?.();
-        return;
       }
     };
 

@@ -63,5 +63,6 @@ export type {
   ShortcutConfig,
   ShortcutModifier,
   KeyboardShortcut,
+  ShortcutMapping,
   GlobalShortcutHandlers,
 } from './shortcuts';

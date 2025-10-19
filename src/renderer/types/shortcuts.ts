@@ -18,6 +18,16 @@ export type KeyboardShortcut = ShortcutConfig & {
 };
 
 /**
+ * Mapping of shortcuts to their handlers
+ */
+export interface ShortcutMapping {
+  config: ShortcutConfig;
+  handler: () => void;
+  priority: 'modal' | 'global';
+  requiresClosed?: boolean; // Execute after closing modal
+}
+
+/**
  * Interface for global keyboard shortcut handlers
  */
 export interface GlobalShortcutHandlers {
