@@ -207,7 +207,11 @@ const TerminalPaneComponent: React.FC<Props> = ({
           rows,
           shell,
         });
-        console.log('[TerminalPane] PTY start result:', { id, ok: res?.ok, error: (res as any)?.error });
+        console.log('[TerminalPane] PTY start result:', {
+          id,
+          ok: res?.ok,
+          error: (res as any)?.error,
+        });
         if (!res?.ok) {
           term.writeln('\x1b[31mFailed to start PTY:\x1b[0m ' + (res as any)?.error);
           try {

@@ -38,9 +38,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
               </div>
               <div className="rounded bg-gray-50 p-4 font-mono text-xs">
                 <div className="font-bold text-gray-800">Stack:</div>
-                <pre className="whitespace-pre-wrap text-gray-600">
-                  {this.state.error?.stack}
-                </pre>
+                <pre className="whitespace-pre-wrap text-gray-600">{this.state.error?.stack}</pre>
               </div>
               <button
                 onClick={() => window.location.reload()}

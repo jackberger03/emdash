@@ -102,7 +102,9 @@ export const ProviderBar: React.FC<Props> = ({
                           ? 'cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-600'
                           : 'cursor-default'
                       }`}
-                      onClick={() => allowChange && onProviderChange && setShowDropdown(!showDropdown)}
+                      onClick={() =>
+                        allowChange && onProviderChange && setShowDropdown(!showDropdown)
+                      }
                       disabled={!allowChange || !onProviderChange}
                       title={cfg.name}
                     >

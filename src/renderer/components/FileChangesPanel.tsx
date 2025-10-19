@@ -17,7 +17,11 @@ interface FileChangesPanelProps {
   workspaceMetadata?: any; // Workspace metadata including PR info
 }
 
-const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceId, className, workspaceMetadata }) => {
+const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
+  workspaceId,
+  className,
+  workspaceMetadata,
+}) => {
   const [showDiffModal, setShowDiffModal] = useState(false);
   const [selectedPath, setSelectedPath] = useState<string | undefined>(undefined);
   const [stagingFiles, setStagingFiles] = useState<Set<string>>(new Set());
@@ -27,8 +31,9 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceI
   const { isCreating: isCreatingPR, createPR } = useCreatePR();
 
   // Extract PR base branch from metadata for PR workspaces
-  const prBaseBranch = workspaceMetadata?.pullRequest?.baseRefName ||
-                        (workspaceMetadata?.pullRequest ? 'main' : undefined);
+  const prBaseBranch =
+    workspaceMetadata?.pullRequest?.baseRefName ||
+    (workspaceMetadata?.pullRequest ? 'main' : undefined);
   const isPRWorkspace = !!workspaceMetadata?.pullRequest;
 
   const { fileChanges, refreshChanges } = useFileChanges(workspaceId, prBaseBranch);
@@ -322,7 +327,8 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceI
                 >
                   PR {pr.isDraft ? 'draft' : pr.state.toLowerCase()}
                 </button>
-              ) : !isPRWorkspace && (branchStatusLoading || (branchAhead !== null && branchAhead > 0)) ? (
+              ) : !isPRWorkspace &&
+                (branchStatusLoading || (branchAhead !== null && branchAhead > 0)) ? (
                 <Button
                   variant="outline"
                   size="sm"

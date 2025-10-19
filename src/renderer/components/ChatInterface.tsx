@@ -51,7 +51,7 @@ const ChatInterface: React.FC<Props> = ({
     workspaceId: workspace.id,
     paneId,
     effectiveWorkspaceId,
-    initialProvider
+    initialProvider,
   });
   const { toast } = useToast();
   const { effectiveTheme } = useTheme();
@@ -213,7 +213,8 @@ const ChatInterface: React.FC<Props> = ({
   useEffect(() => {
     (async () => {
       try {
-        if (provider !== 'codex') await (window as any).electronAPI.codexStopStream?.(effectiveWorkspaceId);
+        if (provider !== 'codex')
+          await (window as any).electronAPI.codexStopStream?.(effectiveWorkspaceId);
         if (provider !== 'claude')
           await (window as any).electronAPI.agentStopStream?.({
             providerId: 'claude',
@@ -434,7 +435,7 @@ const ChatInterface: React.FC<Props> = ({
       console.log('[ChatInterface] handleProviderChange START:', {
         from: provider,
         to: newProvider,
-        effectiveWorkspaceId
+        effectiveWorkspaceId,
       });
 
       // Clear the locked provider state to allow switching
@@ -529,7 +530,10 @@ const ChatInterface: React.FC<Props> = ({
                 keepAlive={false}
                 onActivity={() => {
                   try {
-                    window.localStorage.setItem(`provider:locked:${effectiveWorkspaceId}`, provider);
+                    window.localStorage.setItem(
+                      `provider:locked:${effectiveWorkspaceId}`,
+                      provider
+                    );
                     setLockedProvider(provider);
                   } catch {}
                 }}

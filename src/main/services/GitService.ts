@@ -141,7 +141,10 @@ export async function revertFile(
 }
 
 // Get changes between current branch and a base branch (for PR workspaces)
-export async function getPRBranchChanges(workspacePath: string, baseBranch: string): Promise<GitChange[]> {
+export async function getPRBranchChanges(
+  workspacePath: string,
+  baseBranch: string
+): Promise<GitChange[]> {
   try {
     // Ensure it's a git repo
     await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], {

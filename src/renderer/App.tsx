@@ -801,8 +801,7 @@ const AppContent: React.FC = () => {
       });
 
       if (!response?.success || !response?.worktree) {
-        const message =
-          response?.error || 'Failed to create a workspace for this pull request.';
+        const message = response?.error || 'Failed to create a workspace for this pull request.';
         toast({
           title: 'Pull Request Checkout Failed',
           description: message,
@@ -858,9 +857,7 @@ const AppContent: React.FC = () => {
       );
 
       setSelectedProject((prev) =>
-        prev
-          ? { ...prev, workspaces: [...(prev.workspaces || []), newWorkspace] }
-          : null
+        prev ? { ...prev, workspaces: [...(prev.workspaces || []), newWorkspace] } : null
       );
 
       setActiveWorkspace(newWorkspace);

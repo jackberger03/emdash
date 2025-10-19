@@ -320,96 +320,93 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                       onClick={() => refreshPrs()}
                       disabled={prsLoading}
                     >
-                      <RefreshCw
-                        className={`mr-2 size-4 ${prsLoading ? 'animate-spin' : ''}`}
-                      />
+                      <RefreshCw className={`mr-2 size-4 ${prsLoading ? 'animate-spin' : ''}`} />
                       Refresh
                     </Button>
                   </div>
 
                   <CollapsibleContent className="space-y-3">
+                    {prsError && (
+                      <Alert variant="destructive">
+                        <AlertTitle>Failed to load pull requests</AlertTitle>
+                        <AlertDescription>{prsError}</AlertDescription>
+                      </Alert>
+                    )}
 
-                {prsError && (
-                  <Alert variant="destructive">
-                    <AlertTitle>Failed to load pull requests</AlertTitle>
-                    <AlertDescription>{prsError}</AlertDescription>
-                  </Alert>
-                )}
+                    {prsLoading && !prs.length && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin" />
+                        Loading pull requests...
+                      </div>
+                    )}
 
-                {prsLoading && !prs.length && (
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Loader2 className="size-4 animate-spin" />
-                    Loading pull requests...
-                  </div>
-                )}
+                    {!prsLoading && !prsError && prs.length === 0 && (
+                      <Alert>
+                        <AlertTitle>No open pull requests</AlertTitle>
+                        <AlertDescription>
+                          There are no open pull requests for this repository.
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
-                {!prsLoading && !prsError && prs.length === 0 && (
-                  <Alert>
-                    <AlertTitle>No open pull requests</AlertTitle>
-                    <AlertDescription>
-                      There are no open pull requests for this repository.
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                {prs.length > 0 && (
-                  <div className="flex flex-col gap-3">
-                    {prs.map((pr) => {
-                      const isCheckingOut = checkoutPrNumber === pr.number;
-                      return (
-                        <div
-                          key={pr.number}
-                          className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3"
-                        >
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-base font-medium leading-tight">
-                                #{pr.number}
-                              </span>
-                              <span className="text-base font-medium leading-tight tracking-tight">
-                                {pr.title}
-                              </span>
-                              {pr.isDraft && (
-                                <Badge variant="secondary" className="text-xs">
-                                  draft
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                              <GitBranch className="size-3" />
-                              <span className="font-mono">{pr.headRefName}</span>
-                              <span>→</span>
-                              <span className="font-mono">{pr.baseRefName}</span>
-                              {pr.authorLogin && (
-                                <>
-                                  <span>•</span>
-                                  <span>by {pr.authorLogin}</span>
-                                </>
-                              )}
-                            </div>
-                          </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenAgentDialog(pr)}
-                              disabled={isCheckingOut}
+                    {prs.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        {prs.map((pr) => {
+                          const isCheckingOut = checkoutPrNumber === pr.number;
+                          return (
+                            <div
+                              key={pr.number}
+                              className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3"
                             >
-                              {isCheckingOut ? (
-                                <>
-                                  <Loader2 className="mr-2 size-4 animate-spin" />
-                                  Checking out...
-                                </>
-                              ) : (
-                                'Open in Workspace'
-                              )}
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
+                              <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-base font-medium leading-tight">
+                                    #{pr.number}
+                                  </span>
+                                  <span className="text-base font-medium leading-tight tracking-tight">
+                                    {pr.title}
+                                  </span>
+                                  {pr.isDraft && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      draft
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                                  <GitBranch className="size-3" />
+                                  <span className="font-mono">{pr.headRefName}</span>
+                                  <span>→</span>
+                                  <span className="font-mono">{pr.baseRefName}</span>
+                                  {pr.authorLogin && (
+                                    <>
+                                      <span>•</span>
+                                      <span>by {pr.authorLogin}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex shrink-0 items-center gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleOpenAgentDialog(pr)}
+                                  disabled={isCheckingOut}
+                                >
+                                  {isCheckingOut ? (
+                                    <>
+                                      <Loader2 className="mr-2 size-4 animate-spin" />
+                                      Checking out...
+                                    </>
+                                  ) : (
+                                    'Open in Workspace'
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </CollapsibleContent>
                 </div>
               </Collapsible>

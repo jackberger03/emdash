@@ -125,7 +125,7 @@ const MessageList: React.FC<MessageListProps> = ({
     if (streamingOutput === null) return null;
 
     return (
-      <div className="flex justify-start mb-6">
+      <div className="mb-6 flex justify-start">
         <div className="max-w-[80%] px-4 py-3 font-sans text-sm leading-relaxed text-gray-900 dark:text-gray-100">
           {providerId === 'codex' ? (
             (() => {
@@ -139,7 +139,9 @@ const MessageList: React.FC<MessageListProps> = ({
                       <ReasoningContent>{parsed.reasoning || ''}</ReasoningContent>
                     </Reasoning>
                   ) : null}
-                  {parsed.hasCodex && parsed.response ? <Response>{parsed.response}</Response> : null}
+                  {parsed.hasCodex && parsed.response ? (
+                    <Response>{parsed.response}</Response>
+                  ) : null}
                   {parsed && parsed.actions && parsed.actions.length > 0 ? (
                     <StreamingAction text={parsed.actions[parsed.actions.length - 1]} />
                   ) : null}

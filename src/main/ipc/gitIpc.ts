@@ -24,14 +24,17 @@ export function registerGitIpc() {
   });
 
   // Git: Get PR branch changes (diff between current branch and base branch)
-  ipcMain.handle('git:get-pr-branch-changes', async (_, args: { workspacePath: string; baseBranch: string }) => {
-    try {
-      const changes = await gitGetPRBranchChanges(args.workspacePath, args.baseBranch);
-      return { success: true, changes };
-    } catch (error) {
-      return { success: false, error: error as string };
+  ipcMain.handle(
+    'git:get-pr-branch-changes',
+    async (_, args: { workspacePath: string; baseBranch: string }) => {
+      try {
+        const changes = await gitGetPRBranchChanges(args.workspacePath, args.baseBranch);
+        return { success: true, changes };
+      } catch (error) {
+        return { success: false, error: error as string };
+      }
     }
-  });
+  );
 
   // Git: Per-file diff (moved from Codex IPC)
   ipcMain.handle(

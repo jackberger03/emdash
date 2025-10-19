@@ -91,16 +91,10 @@ const AgentSelectionDialog: React.FC<AgentSelectionDialogProps> = ({
                 className={[
                   'flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-all',
                   'hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                  isSelected
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border bg-background',
+                  isSelected ? 'border-primary bg-primary/10' : 'border-border bg-background',
                 ].join(' ')}
               >
-                <img
-                  src={config.logo}
-                  alt={config.name}
-                  className="h-12 w-12 object-contain"
-                />
+                <img src={config.logo} alt={config.name} className="h-12 w-12 object-contain" />
                 <span className="text-sm font-medium">{config.name}</span>
               </button>
             );
