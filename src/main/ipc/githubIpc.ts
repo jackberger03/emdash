@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron';
+import { ipcMain, app } from 'electron';
 import { log } from '../lib/logger';
 import { GitHubService } from '../services/GitHubService';
 import { worktreeService } from '../services/WorktreeService';
@@ -122,11 +122,51 @@ export function registerGithubIpc() {
   });
 
   ipcMain.handle('github:cloneRepository', async (_, repoUrl: string, localPath: string) => {
+    const q = (s: string) => JSON.stringify(s);
     try {
-      return await githubService.cloneRepository(repoUrl, localPath);
+      // Opt-out flag for safety or debugging
+      if (process.env.EMDASH_DISABLE_CLONE_CACHE === '1') {
+        await execAsync(`git clone ${q(repoUrl)} ${q(localPath)}`);
+        return { success: true };
+      }
+
+      // Ensure parent directory exists
+      const dir = path.dirname(localPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+      // If already a git repo, short‑circuit
+      try {
+        if (fs.existsSync(path.join(localPath, '.git'))) return { success: true };
+      } catch {}
+
+      // Use a local bare mirror cache keyed by normalized URL
+      const cacheRoot = path.join(app.getPath('userData'), 'repo-cache');
+      if (!fs.existsSync(cacheRoot)) fs.mkdirSync(cacheRoot, { recursive: true });
+      const norm = (u: string) => u.replace(/\.git$/i, '').trim();
+      const cacheKey = require('crypto').createHash('sha1').update(norm(repoUrl)).digest('hex');
+      const mirrorPath = path.join(cacheRoot, `${cacheKey}.mirror`);
+
+      if (!fs.existsSync(mirrorPath)) {
+        await execAsync(`git clone --mirror --filter=blob:none ${q(repoUrl)} ${q(mirrorPath)}`);
+      } else {
+        try {
+          await execAsync(`git -C ${q(mirrorPath)} remote set-url origin ${q(repoUrl)}`);
+        } catch {}
+        await execAsync(`git -C ${q(mirrorPath)} remote update --prune`);
+      }
+
+      await execAsync(
+        `git clone --reference-if-able ${q(mirrorPath)} --dissociate ${q(repoUrl)} ${q(localPath)}`
+      );
+      return { success: true };
     } catch (error) {
-      log.error('Failed to clone repository:', error);
-      return { success: false, error: 'Clone failed' };
+      log.error('Failed to clone repository via cache:', error);
+      try {
+        await execAsync(`git clone ${q(repoUrl)} ${q(localPath)}`);
+        return { success: true };
+      } catch (e2) {
+        return { success: false, error: e2 instanceof Error ? e2.message : 'Clone failed' };
+      }
     }
   });
 
