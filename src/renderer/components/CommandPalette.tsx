@@ -16,7 +16,7 @@ import {
   Command as CommandIcon,
   Option,
 } from 'lucide-react';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { APP_SHORTCUTS } from '../hooks/useKeyboardShortcuts';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -69,57 +69,6 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [search, setSearch] = useState('');
   const shouldReduceMotion = useReducedMotion();
 
-  // Define keyboard shortcuts for the command palette
-  const shortcuts = useMemo(
-    () => [
-      {
-        key: 'Escape',
-        handler: () => onClose(),
-        description: 'Close command palette',
-      },
-      {
-        key: ',',
-        modifier: 'cmd' as const,
-        handler: () => {
-          onClose();
-          if (onOpenSettings) {
-            setTimeout(() => onOpenSettings(), 100);
-          }
-        },
-        stopPropagation: true,
-        description: 'Open settings',
-      },
-      {
-        key: 'b',
-        modifier: 'cmd' as const,
-        handler: () => {
-          onClose();
-          if (onToggleLeftSidebar) {
-            setTimeout(() => onToggleLeftSidebar(), 100);
-          }
-        },
-        stopPropagation: true,
-        description: 'Toggle left sidebar',
-      },
-      {
-        key: '.',
-        modifier: 'cmd' as const,
-        handler: () => {
-          onClose();
-          if (onToggleRightSidebar) {
-            setTimeout(() => onToggleRightSidebar(), 100);
-          }
-        },
-        stopPropagation: true,
-        description: 'Toggle right sidebar',
-      },
-    ],
-    [onClose, onOpenSettings, onToggleLeftSidebar, onToggleRightSidebar]
-  );
-
-  // Use keyboard shortcuts hook
-  useKeyboardShortcuts({ enabled: isOpen, shortcuts });
-
   // Reset search when closed
   useEffect(() => {
     if (!isOpen) {
@@ -170,11 +119,11 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
       items.push({
         id: 'nav-settings',
         label: 'Open Settings',
-        description: 'Configure application settings',
+        description: APP_SHORTCUTS.SETTINGS.description,
         icon: <Settings className="h-4 w-4" />,
         group: 'Navigation',
         keywords: ['settings', 'preferences', 'config'],
-        shortcut: { key: ',', modifier: 'cmd' },
+        shortcut: { key: APP_SHORTCUTS.SETTINGS.key, modifier: APP_SHORTCUTS.SETTINGS.modifier },
         onSelect: () => runCommand(onOpenSettings),
       });
     }
@@ -184,11 +133,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
       items.push({
         id: 'toggle-left',
         label: 'Toggle Left Sidebar',
-        description: 'Show/hide project list',
+        description: APP_SHORTCUTS.TOGGLE_LEFT_SIDEBAR.description,
         icon: <PanelLeft className="h-4 w-4" />,
         group: 'Toggles',
         keywords: ['sidebar', 'panel', 'left', 'toggle'],
-        shortcut: { key: 'B', modifier: 'cmd' },
+        shortcut: {
+          key: APP_SHORTCUTS.TOGGLE_LEFT_SIDEBAR.key.toUpperCase(),
+          modifier: APP_SHORTCUTS.TOGGLE_LEFT_SIDEBAR.modifier,
+        },
         onSelect: () => runCommand(onToggleLeftSidebar),
       });
     }
@@ -197,11 +149,14 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
       items.push({
         id: 'toggle-right',
         label: 'Toggle Right Sidebar',
-        description: 'Show/hide details panel',
+        description: APP_SHORTCUTS.TOGGLE_RIGHT_SIDEBAR.description,
         icon: <PanelRight className="h-4 w-4" />,
         group: 'Toggles',
         keywords: ['sidebar', 'panel', 'right', 'toggle'],
-        shortcut: { key: '.', modifier: 'cmd' },
+        shortcut: {
+          key: APP_SHORTCUTS.TOGGLE_RIGHT_SIDEBAR.key,
+          modifier: APP_SHORTCUTS.TOGGLE_RIGHT_SIDEBAR.modifier,
+        },
         onSelect: () => runCommand(onToggleRightSidebar),
       });
     }

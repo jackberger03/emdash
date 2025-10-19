@@ -9,8 +9,6 @@ import IntegrationsCard from './IntegrationsCard';
 import CliProvidersList, { BASE_CLI_PROVIDERS } from './CliProvidersList';
 import TelemetryCard from './TelemetryCard';
 import ThemeCard from './ThemeCard';
-import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-
 import { CliProviderStatus } from '../types/connections';
 import { Separator } from './ui/separator';
 
@@ -65,20 +63,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
       setActiveTab('general');
     }
   }, [isOpen]);
-
-  // Keyboard shortcuts for settings modal
-  const shortcuts = useMemo(
-    () => [
-      {
-        key: 'Escape',
-        handler: () => onClose(),
-        description: 'Close settings',
-      },
-    ],
-    [onClose]
-  );
-
-  useKeyboardShortcuts({ enabled: isOpen, shortcuts });
 
   const fetchCliProviders = useCallback(async () => {
     if (!window?.electronAPI?.getCliProviders) {

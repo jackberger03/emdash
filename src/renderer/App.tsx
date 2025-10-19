@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from './components/ui/button';
 
 import { FolderOpen } from 'lucide-react';
@@ -28,29 +28,40 @@ import SettingsModal from './components/SettingsModal';
 import CommandPalette from './components/CommandPalette';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
-const SidebarHotkeys: React.FC = () => {
+interface AppKeyboardShortcutsProps {
+  showCommandPalette: boolean;
+  showSettings: boolean;
+  handleToggleCommandPalette: () => void;
+  handleOpenSettings: () => void;
+  handleCloseCommandPalette: () => void;
+  handleCloseSettings: () => void;
+}
+
+const AppKeyboardShortcuts: React.FC<AppKeyboardShortcutsProps> = ({
+  showCommandPalette,
+  showSettings,
+  handleToggleCommandPalette,
+  handleOpenSettings,
+  handleCloseCommandPalette,
+  handleCloseSettings,
+}) => {
   const { toggle: toggleLeftSidebar } = useSidebar();
   const { toggle: toggleRightSidebar } = useRightSidebar();
 
-  const sidebarShortcuts = useMemo(
-    () => [
-      {
-        key: 'b',
-        modifier: 'cmd' as const,
-        handler: () => toggleLeftSidebar(),
-        description: 'Toggle left sidebar',
-      },
-      {
-        key: '.',
-        modifier: 'cmd' as const,
-        handler: () => toggleRightSidebar(),
-        description: 'Toggle right sidebar',
-      },
-    ],
-    [toggleLeftSidebar, toggleRightSidebar]
-  );
-
-  useKeyboardShortcuts({ enabled: true, shortcuts: sidebarShortcuts });
+  // Single global keyboard shortcuts handler
+  useKeyboardShortcuts({
+    onToggleCommandPalette: handleToggleCommandPalette,
+    onOpenSettings: handleOpenSettings,
+    onToggleLeftSidebar: toggleLeftSidebar,
+    onToggleRightSidebar: toggleRightSidebar,
+    onCloseModal: showCommandPalette
+      ? handleCloseCommandPalette
+      : showSettings
+        ? handleCloseSettings
+        : undefined,
+    isCommandPaletteOpen: showCommandPalette,
+    isSettingsOpen: showSettings,
+  });
 
   return null;
 };
@@ -349,32 +360,6 @@ const AppContent: React.FC = () => {
   const handleCloseCommandPalette = useCallback(() => {
     setShowCommandPalette(false);
   }, []);
-
-  // Global keyboard shortcuts
-  const globalShortcuts = useMemo(
-    () => [
-      {
-        key: 'k',
-        modifier: 'cmd' as const,
-        handler: () => handleToggleCommandPalette(),
-        description: 'Toggle command palette',
-      },
-      {
-        key: ',',
-        modifier: 'cmd' as const,
-        handler: () => {
-          // Only handle if command palette is not open
-          if (!showCommandPalette) {
-            handleOpenSettings();
-          }
-        },
-        description: 'Open settings',
-      },
-    ],
-    [handleToggleCommandPalette, handleOpenSettings, showCommandPalette]
-  );
-
-  useKeyboardShortcuts({ enabled: true, shortcuts: globalShortcuts });
 
   useEffect(() => {
     const rightPanel = rightSidebarPanelRef.current;
@@ -1090,11 +1075,18 @@ const AppContent: React.FC = () => {
     >
       <SidebarProvider>
         <RightSidebarProvider defaultCollapsed>
+          <AppKeyboardShortcuts
+            showCommandPalette={showCommandPalette}
+            showSettings={showSettings}
+            handleToggleCommandPalette={handleToggleCommandPalette}
+            handleOpenSettings={handleOpenSettings}
+            handleCloseCommandPalette={handleCloseCommandPalette}
+            handleCloseSettings={handleCloseSettings}
+          />
           <RightSidebarBridge
             onCollapsedChange={handleRightSidebarCollapsedChange}
             setCollapsedRef={rightSidebarSetCollapsedRef}
           />
-          <SidebarHotkeys />
           <Titlebar onToggleSettings={handleToggleSettings} isSettingsOpen={showSettings} />
           <div className="flex flex-1 overflow-hidden pt-[var(--tb)]">
             <ResizablePanelGroup

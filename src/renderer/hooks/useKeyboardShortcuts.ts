@@ -1,94 +1,178 @@
 import { useEffect } from 'react';
+import type { ShortcutConfig, GlobalShortcutHandlers } from '../types/shortcuts';
 
-export type KeyboardShortcut = {
-  key: string;
-  modifier?: 'cmd' | 'ctrl' | 'shift' | 'alt' | 'option';
-  handler: (event: KeyboardEvent) => void;
-  preventDefault?: boolean;
-  stopPropagation?: boolean;
-  description?: string;
-};
+/**
+ * ==============================================================================
+ * SHORTCUTS CONFIGURATION (Single Source of Truth)
+ * ==============================================================================
+ */
 
-interface UseKeyboardShortcutsOptions {
-  enabled?: boolean;
-  shortcuts: KeyboardShortcut[];
+export const APP_SHORTCUTS = {
+  // Command Palette
+  COMMAND_PALETTE: {
+    key: 'k',
+    modifier: 'cmd' as const,
+    description: 'Open command palette',
+    category: 'Navigation',
+  },
+
+  // Settings & Config
+  SETTINGS: {
+    key: ',',
+    modifier: 'cmd' as const,
+    description: 'Open settings',
+    category: 'Navigation',
+  },
+
+  // Sidebar Controls
+  TOGGLE_LEFT_SIDEBAR: {
+    key: 'b',
+    modifier: 'cmd' as const,
+    description: 'Toggle left sidebar',
+    category: 'View',
+  },
+
+  TOGGLE_RIGHT_SIDEBAR: {
+    key: '.',
+    modifier: 'cmd' as const,
+    description: 'Toggle right sidebar',
+    category: 'View',
+  },
+
+  // Modal Controls
+  CLOSE_MODAL: {
+    key: 'Escape',
+    description: 'Close modal/dialog',
+    category: 'Navigation',
+  },
+} as const;
+
+/**
+ * ==============================================================================
+ * HELPER FUNCTIONS
+ * ==============================================================================
+ */
+
+export function formatShortcut(shortcut: ShortcutConfig): string {
+  const modifier = shortcut.modifier
+    ? shortcut.modifier === 'cmd'
+      ? '⌘'
+      : shortcut.modifier === 'option'
+        ? '⌥'
+        : shortcut.modifier === 'shift'
+          ? '⇧'
+          : shortcut.modifier === 'alt'
+            ? 'Alt'
+            : 'Ctrl'
+    : '';
+
+  const key = shortcut.key === 'Escape' ? 'Esc' : shortcut.key.toUpperCase();
+
+  return modifier ? `${modifier}${key}` : key;
+}
+
+export function getShortcutsByCategory(): Record<string, ShortcutConfig[]> {
+  const shortcuts = Object.values(APP_SHORTCUTS);
+  const grouped: Record<string, ShortcutConfig[]> = {};
+
+  shortcuts.forEach((shortcut) => {
+    const category = shortcut.category || 'Other';
+    if (!grouped[category]) {
+      grouped[category] = [];
+    }
+    grouped[category].push(shortcut);
+  });
+
+  return grouped;
+}
+
+export function hasShortcutConflict(shortcut1: ShortcutConfig, shortcut2: ShortcutConfig): boolean {
+  return (
+    shortcut1.key.toLowerCase() === shortcut2.key.toLowerCase() &&
+    shortcut1.modifier === shortcut2.modifier
+  );
 }
 
 /**
- * Custom hook to handle keyboard shortcuts
- * @param options - Configuration options including shortcuts array
+ * ==============================================================================
+ * GLOBAL SHORTCUT HOOK
+ * ==============================================================================
  */
-export function useKeyboardShortcuts({ enabled = true, shortcuts }: UseKeyboardShortcutsOptions) {
+
+/**
+ * Single global keyboard shortcuts hook
+ * Call this once in your App component with all handlers
+ */
+export function useKeyboardShortcuts(handlers: GlobalShortcutHandlers) {
   useEffect(() => {
-    if (!enabled || typeof window === 'undefined') return undefined;
-
-    const handler = (event: KeyboardEvent) => {
+    const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
-      const code = event.code?.toLowerCase();
+      const hasModifier = event.metaKey || event.ctrlKey;
 
-      // Check each shortcut
-      for (const shortcut of shortcuts) {
-        const shortcutKey = shortcut.key.toLowerCase();
-        const keyMatches =
-          key === shortcutKey || code === shortcutKey || code === `key${shortcutKey}`;
-
-        if (!keyMatches) continue;
-
-        // Check modifier requirements
-        const modifierPressed =
-          shortcut.modifier === 'cmd' || shortcut.modifier === 'ctrl'
-            ? event.metaKey || event.ctrlKey
-            : shortcut.modifier === 'shift'
-              ? event.shiftKey
-              : shortcut.modifier === 'alt' || shortcut.modifier === 'option'
-                ? event.altKey
-                : true; // No modifier required
-
-        if (modifierPressed) {
-          if (shortcut.preventDefault !== false) {
-            event.preventDefault();
-          }
-          if (shortcut.stopPropagation) {
-            event.stopPropagation();
-          }
-          shortcut.handler(event);
-          return; // Stop after first match
+      // Priority 1: Modal Escape (if any modal is open)
+      if (key === 'escape') {
+        if (handlers.isCommandPaletteOpen || handlers.isSettingsOpen) {
+          event.preventDefault();
+          handlers.onCloseModal?.();
+          return;
         }
+      }
+
+      // Only handle Cmd/Ctrl shortcuts below this point
+      if (!hasModifier) return;
+
+      // Priority 2: Command Palette Toggle (Cmd+K)
+      if (key === 'k') {
+        event.preventDefault();
+        handlers.onToggleCommandPalette?.();
+        return;
+      }
+
+      // Priority 3: Modal shortcuts (when modals are open, they intercept)
+      if (handlers.isCommandPaletteOpen) {
+        // Command palette is open - it handles its own shortcuts
+        if (key === ',') {
+          event.preventDefault();
+          handlers.onCloseModal?.();
+          setTimeout(() => handlers.onOpenSettings?.(), 100);
+          return;
+        }
+        if (key === 'b') {
+          event.preventDefault();
+          handlers.onCloseModal?.();
+          setTimeout(() => handlers.onToggleLeftSidebar?.(), 100);
+          return;
+        }
+        if (key === '.') {
+          event.preventDefault();
+          handlers.onCloseModal?.();
+          setTimeout(() => handlers.onToggleRightSidebar?.(), 100);
+          return;
+        }
+        return; // Prevent other shortcuts when command palette is open
+      }
+
+      // Priority 4: Global shortcuts (when no modal is open)
+      if (key === ',') {
+        event.preventDefault();
+        handlers.onOpenSettings?.();
+        return;
+      }
+
+      if (key === 'b') {
+        event.preventDefault();
+        handlers.onToggleLeftSidebar?.();
+        return;
+      }
+
+      if (key === '.') {
+        event.preventDefault();
+        handlers.onToggleRightSidebar?.();
+        return;
       }
     };
 
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [enabled, shortcuts]);
-}
-
-/**
- * Helper to check if a keyboard event matches a shortcut
- */
-export function matchesShortcut(
-  event: KeyboardEvent,
-  key: string,
-  modifier?: 'cmd' | 'ctrl' | 'shift' | 'alt' | 'option'
-): boolean {
-  const eventKey = event.key.toLowerCase();
-  const eventCode = event.code?.toLowerCase();
-  const targetKey = key.toLowerCase();
-
-  const keyMatches =
-    eventKey === targetKey || eventCode === targetKey || eventCode === `key${targetKey}`;
-
-  if (!keyMatches) return false;
-
-  switch (modifier) {
-    case 'cmd':
-    case 'ctrl':
-      return event.metaKey || event.ctrlKey;
-    case 'shift':
-      return event.shiftKey;
-    case 'alt':
-    case 'option':
-      return event.altKey;
-    default:
-      return true;
-  }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handlers]);
 }
