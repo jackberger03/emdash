@@ -14,9 +14,10 @@ import { Plus, Undo2 } from 'lucide-react';
 interface FileChangesPanelProps {
   workspaceId: string;
   className?: string;
+  workspaceMetadata?: any; // Workspace metadata including PR info
 }
 
-const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceId, className }) => {
+const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceId, className, workspaceMetadata }) => {
   const [showDiffModal, setShowDiffModal] = useState(false);
   const [selectedPath, setSelectedPath] = useState<string | undefined>(undefined);
   const [stagingFiles, setStagingFiles] = useState<Set<string>>(new Set());
@@ -24,7 +25,13 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceI
   const [commitMessage, setCommitMessage] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
   const { isCreating: isCreatingPR, createPR } = useCreatePR();
-  const { fileChanges, refreshChanges } = useFileChanges(workspaceId);
+
+  // Extract PR base branch from metadata for PR workspaces
+  const prBaseBranch = workspaceMetadata?.pullRequest?.baseRefName ||
+                        (workspaceMetadata?.pullRequest ? 'main' : undefined);
+  const isPRWorkspace = !!workspaceMetadata?.pullRequest;
+
+  const { fileChanges, refreshChanges } = useFileChanges(workspaceId, prBaseBranch);
   const { toast } = useToast();
   const hasChanges = fileChanges.length > 0;
   const hasStagedChanges = fileChanges.some((change) => change.isStaged);
@@ -245,26 +252,28 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceI
                   </span>
                 )}
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-8 border-gray-200 px-2 text-xs text-gray-700 dark:border-gray-700 dark:text-gray-200"
-                disabled={isCreatingPR}
-                title="Commit all changes and create a pull request"
-                onClick={async () => {
-                  await createPR({
-                    workspacePath: workspaceId,
-                    onSuccess: async () => {
-                      await refreshChanges();
-                      try {
-                        await refreshPr();
-                      } catch {}
-                    },
-                  });
-                }}
-              >
-                {isCreatingPR ? <Spinner size="sm" /> : 'Create PR'}
-              </Button>
+              {!isPRWorkspace && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-gray-200 px-2 text-xs text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                  disabled={isCreatingPR}
+                  title="Commit all changes and create a pull request"
+                  onClick={async () => {
+                    await createPR({
+                      workspacePath: workspaceId,
+                      onSuccess: async () => {
+                        await refreshChanges();
+                        try {
+                          await refreshPr();
+                        } catch {}
+                      },
+                    });
+                  }}
+                >
+                  {isCreatingPR ? <Spinner size="sm" /> : 'Create PR'}
+                </Button>
+              )}
             </div>
 
             {hasStagedChanges && (
@@ -313,7 +322,7 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceI
                 >
                   PR {pr.isDraft ? 'draft' : pr.state.toLowerCase()}
                 </button>
-              ) : branchStatusLoading || (branchAhead !== null && branchAhead > 0) ? (
+              ) : !isPRWorkspace && (branchStatusLoading || (branchAhead !== null && branchAhead > 0)) ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -334,9 +343,9 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceI
                 >
                   {isCreatingPR || branchStatusLoading ? <Spinner size="sm" /> : 'Create PR'}
                 </Button>
-              ) : (
+              ) : !isPRWorkspace ? (
                 <span className="text-xs text-gray-500">No PR for this branch</span>
-              )}
+              ) : null}
             </div>
           </div>
         )}

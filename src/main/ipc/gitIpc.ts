@@ -5,6 +5,7 @@ import { promisify } from 'util';
 import {
   getStatus as gitGetStatus,
   getFileDiff as gitGetFileDiff,
+  getPRBranchChanges as gitGetPRBranchChanges,
   stageFile as gitStageFile,
   revertFile as gitRevertFile,
 } from '../services/GitService';
@@ -16,6 +17,16 @@ export function registerGitIpc() {
   ipcMain.handle('git:get-status', async (_, workspacePath: string) => {
     try {
       const changes = await gitGetStatus(workspacePath);
+      return { success: true, changes };
+    } catch (error) {
+      return { success: false, error: error as string };
+    }
+  });
+
+  // Git: Get PR branch changes (diff between current branch and base branch)
+  ipcMain.handle('git:get-pr-branch-changes', async (_, args: { workspacePath: string; baseBranch: string }) => {
+    try {
+      const changes = await gitGetPRBranchChanges(args.workspacePath, args.baseBranch);
       return { success: true, changes };
     } catch (error) {
       return { success: false, error: error as string };

@@ -99,6 +99,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openProject: () => ipcRenderer.invoke('project:open'),
   getGitInfo: (projectPath: string) => ipcRenderer.invoke('git:getInfo', projectPath),
   getGitStatus: (workspacePath: string) => ipcRenderer.invoke('git:get-status', workspacePath),
+  getPRBranchChanges: (args: { workspacePath: string; baseBranch: string }) =>
+    ipcRenderer.invoke('git:get-pr-branch-changes', args),
   getFileDiff: (args: { workspacePath: string; filePath: string }) =>
     ipcRenderer.invoke('git:get-file-diff', args),
   stageFile: (args: { workspacePath: string; filePath: string }) =>

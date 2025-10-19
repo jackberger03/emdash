@@ -9,7 +9,7 @@ export interface FileChange {
   diff?: string;
 }
 
-export function useFileChanges(workspacePath: string) {
+export function useFileChanges(workspacePath: string, prBaseBranch?: string) {
   const [fileChanges, setFileChanges] = useState<FileChange[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +24,11 @@ export function useFileChanges(workspacePath: string) {
       }
 
       try {
-        // Call main process to get git status
-        const result = await window.electronAPI.getGitStatus(workspacePath);
+        // For PR workspaces, get diff between PR branch and base branch
+        // Otherwise, get regular working directory changes
+        const result = prBaseBranch
+          ? await window.electronAPI.getPRBranchChanges({ workspacePath, baseBranch: prBaseBranch })
+          : await window.electronAPI.getGitStatus(workspacePath);
 
         if (result?.success && result.changes && result.changes.length > 0) {
           const changes: FileChange[] = result.changes.map(
@@ -69,12 +72,14 @@ export function useFileChanges(workspacePath: string) {
     const interval = setInterval(() => fetchFileChanges(false), 5000);
 
     return () => clearInterval(interval);
-  }, [workspacePath]);
+  }, [workspacePath, prBaseBranch]);
 
   const refreshChanges = async () => {
     setIsLoading(true);
     try {
-      const result = await window.electronAPI.getGitStatus(workspacePath);
+      const result = prBaseBranch
+        ? await window.electronAPI.getPRBranchChanges({ workspacePath, baseBranch: prBaseBranch })
+        : await window.electronAPI.getGitStatus(workspacePath);
       if (result?.success && result.changes && result.changes.length > 0) {
         const changes: FileChange[] = result.changes.map(
           (change: {

@@ -7,6 +7,18 @@ import { Spinner } from './ui/spinner';
 import { usePrStatus } from '../hooks/usePrStatus';
 import { useWorkspaceBusy } from '../hooks/useWorkspaceBusy';
 
+interface WorkspaceMetadata {
+  linearIssue?: any;
+  initialPrompt?: string | null;
+  pullRequest?: {
+    number: number;
+    title: string;
+    url?: string;
+    author?: string | null;
+    branch?: string;
+  } | null;
+}
+
 interface Workspace {
   id: string;
   name: string;
@@ -14,6 +26,7 @@ interface Workspace {
   path: string;
   status: 'active' | 'idle' | 'running';
   agentId?: string;
+  metadata?: WorkspaceMetadata | null;
 }
 
 interface WorkspaceItemProps {
@@ -26,7 +39,9 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({ workspace, onDelet
     workspace.path,
     workspace.id
   );
-  const { pr } = usePrStatus(workspace.path);
+  // Don't fetch PR status for workspaces that were created from PRs
+  const shouldFetchPrStatus = !workspace.metadata?.pullRequest;
+  const { pr } = usePrStatus(workspace.path, shouldFetchPrStatus);
   const isRunning = useWorkspaceBusy(workspace.id);
 
   const [isDeleting, setIsDeleting] = React.useState(false);
@@ -46,7 +61,7 @@ export const WorkspaceItem: React.FC<WorkspaceItemProps> = ({ workspace, onDelet
       <div className="flex flex-shrink-0 items-center space-x-2">
         {!isLoading && (totalAdditions > 0 || totalDeletions > 0) ? (
           <ChangesBadge additions={totalAdditions} deletions={totalDeletions} />
-        ) : pr ? (
+        ) : pr && !workspace.metadata?.pullRequest ? (
           <div className="flex items-center gap-1">
             {(pr.state === 'MERGED' || pr.state === 'CLOSED') && onDelete ? (
               <WorkspaceDeleteButton

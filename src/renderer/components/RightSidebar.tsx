@@ -36,6 +36,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ workspace, className, ...re
           <div className="flex h-full flex-col">
             <FileChangesPanel
               workspaceId={workspace.path}
+              workspaceMetadata={workspace.metadata}
               className="min-h-0 flex-1 border-b border-border"
             />
             <WorkspaceTerminalPanel workspace={workspace} className="min-h-0 flex-1" />

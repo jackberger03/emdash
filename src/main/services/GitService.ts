@@ -140,6 +140,95 @@ export async function revertFile(
   return { action: 'reverted' };
 }
 
+// Get changes between current branch and a base branch (for PR workspaces)
+export async function getPRBranchChanges(workspacePath: string, baseBranch: string): Promise<GitChange[]> {
+  try {
+    // Ensure it's a git repo
+    await execFileAsync('git', ['rev-parse', '--is-inside-work-tree'], {
+      cwd: workspacePath,
+    });
+  } catch {
+    return [];
+  }
+
+  try {
+    // Get list of changed files between base and HEAD
+    const { stdout: diffOutput } = await execFileAsync(
+      'git',
+      ['diff', '--name-status', `origin/${baseBranch}...HEAD`],
+      { cwd: workspacePath }
+    );
+
+    if (!diffOutput.trim()) return [];
+
+    const changes: GitChange[] = [];
+    const diffLines = diffOutput
+      .split('\n')
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+
+    for (const line of diffLines) {
+      const parts = line.split('\t');
+      if (parts.length < 2) continue;
+
+      const statusCode = parts[0];
+      let filePath = parts[1];
+
+      // Handle renames
+      if (statusCode.startsWith('R') && parts.length >= 3) {
+        filePath = parts[2]; // Use the new name for renamed files
+      }
+
+      let status = 'modified';
+      if (statusCode.startsWith('A')) status = 'added';
+      else if (statusCode.startsWith('D')) status = 'deleted';
+      else if (statusCode.startsWith('R')) status = 'renamed';
+      else if (statusCode.startsWith('M')) status = 'modified';
+
+      if (filePath.endsWith('codex-stream.log')) continue;
+
+      // Get numstat for additions/deletions
+      let additions = 0;
+      let deletions = 0;
+
+      try {
+        const { stdout: numstatOutput } = await execFileAsync(
+          'git',
+          ['diff', '--numstat', `origin/${baseBranch}...HEAD`, '--', filePath],
+          { cwd: workspacePath }
+        );
+
+        const numstatLines = numstatOutput
+          .trim()
+          .split('\n')
+          .filter((l) => l.trim().length > 0);
+
+        for (const l of numstatLines) {
+          const p = l.split('\t');
+          if (p.length >= 2) {
+            const addStr = p[0];
+            const delStr = p[1];
+            const a = addStr === '-' ? 0 : parseInt(addStr, 10) || 0;
+            const d = delStr === '-' ? 0 : parseInt(delStr, 10) || 0;
+            additions += a;
+            deletions += d;
+          }
+        }
+      } catch {
+        // Ignore numstat errors
+      }
+
+      // PR changes are not "staged" in the traditional sense
+      changes.push({ path: filePath, status, additions, deletions, isStaged: false });
+    }
+
+    return changes;
+  } catch (error) {
+    console.error('Error getting PR branch changes:', error);
+    return [];
+  }
+}
+
 export async function getFileDiff(
   workspacePath: string,
   filePath: string

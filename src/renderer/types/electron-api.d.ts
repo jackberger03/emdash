@@ -89,6 +89,17 @@ declare global {
         }>;
         error?: string;
       }>;
+      getPRBranchChanges: (args: { workspacePath: string; baseBranch: string }) => Promise<{
+        success: boolean;
+        changes?: Array<{
+          path: string;
+          status: string;
+          additions: number;
+          deletions: number;
+          isStaged: boolean;
+        }>;
+        error?: string;
+      }>;
       getFileDiff: (args: { workspacePath: string; filePath: string }) => Promise<{
         success: boolean;
         diff?: {

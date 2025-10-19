@@ -11,13 +11,17 @@ export type PrStatus = {
   title?: string;
 };
 
-export function usePrStatus(workspacePath?: string) {
+export function usePrStatus(workspacePath?: string, enabled: boolean = true) {
   const [pr, setPr] = useState<PrStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const refresh = async () => {
-    if (!workspacePath) return;
+    if (!workspacePath || !enabled) {
+      setPr(null);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -35,9 +39,14 @@ export function usePrStatus(workspacePath?: string) {
   };
 
   useEffect(() => {
+    if (!enabled) {
+      setPr(null);
+      setError(null);
+      return;
+    }
     refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspacePath]);
+  }, [workspacePath, enabled]);
 
   return { pr, loading, error, refresh };
 }
