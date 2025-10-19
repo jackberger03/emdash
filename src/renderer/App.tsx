@@ -22,6 +22,7 @@ import { RightSidebarProvider, useRightSidebar } from './components/ui/right-sid
 import RightSidebar from './components/RightSidebar';
 import { type Provider } from './types';
 import { type LinearIssueSummary } from './types/linear';
+import { type Workspace, type WorkspaceMetadata } from './types/chat';
 import { providerMeta, type UiProvider } from './providers/meta';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
 import { loadPanelSizes, savePanelSizes } from './lib/persisted-layout';
@@ -100,28 +101,6 @@ interface Project {
     connected: boolean;
   };
   workspaces?: Workspace[];
-}
-
-interface WorkspaceMetadata {
-  linearIssue?: LinearIssueSummary | null;
-  initialPrompt?: string | null;
-  pullRequest?: {
-    number: number;
-    title: string;
-    url?: string;
-    author?: string | null;
-    branch?: string;
-  } | null;
-}
-
-interface Workspace {
-  id: string;
-  name: string;
-  branch: string;
-  path: string;
-  status: 'active' | 'idle' | 'running';
-  agentId?: string;
-  metadata?: WorkspaceMetadata | null;
 }
 
 const TITLEBAR_HEIGHT = '36px';
@@ -563,7 +542,8 @@ const AppContent: React.FC = () => {
     workspaceName: string,
     initialPrompt?: string,
     selectedProvider?: Provider,
-    linkedLinearIssue: LinearIssueSummary | null = null
+    linkedLinearIssue: LinearIssueSummary | null = null,
+    useWorktree: boolean = true
   ) => {
     if (!selectedProject) return;
 
@@ -630,27 +610,42 @@ const AppContent: React.FC = () => {
           ? { linearIssue: linkedLinearIssue ?? null, initialPrompt: preparedPrompt ?? null }
           : null;
 
-      // Create Git worktree
-      const worktreeResult = await window.electronAPI.worktreeCreate({
-        projectPath: selectedProject.path,
-        workspaceName,
-        projectId: selectedProject.id,
-      });
+      let newWorkspace: Workspace;
 
-      if (!worktreeResult.success) {
-        throw new Error(worktreeResult.error || 'Failed to create worktree');
+      if (useWorktree) {
+        // Create Git worktree
+        const worktreeResult = await window.electronAPI.worktreeCreate({
+          projectPath: selectedProject.path,
+          workspaceName,
+          projectId: selectedProject.id,
+        });
+
+        if (!worktreeResult.success) {
+          throw new Error(worktreeResult.error || 'Failed to create worktree');
+        }
+
+        const worktree = worktreeResult.worktree;
+
+        newWorkspace = {
+          id: worktree.id,
+          name: workspaceName,
+          branch: worktree.branch,
+          path: worktree.path,
+          status: 'idle',
+          metadata: workspaceMetadata,
+        };
+      } else {
+        // Work directly in project folder
+        const workspaceId = `ws-direct-${Date.now()}`;
+        newWorkspace = {
+          id: workspaceId,
+          name: workspaceName,
+          branch: selectedProject.gitInfo.branch || 'main',
+          path: selectedProject.path,
+          status: 'idle',
+          metadata: { ...workspaceMetadata, isDirect: true },
+        };
       }
-
-      const worktree = worktreeResult.worktree;
-
-      const newWorkspace: Workspace = {
-        id: worktree.id,
-        name: workspaceName,
-        branch: worktree.branch,
-        path: worktree.path,
-        status: 'idle',
-        metadata: workspaceMetadata,
-      };
 
       // Save workspace to database
       const saveResult = await window.electronAPI.saveWorkspace({
@@ -952,14 +947,17 @@ const AppContent: React.FC = () => {
         log.warn('Failed to remove agent before deleting workspace:', agentError as any);
       }
 
-      const removeResult = await window.electronAPI.worktreeRemove({
-        projectPath: targetProject.path,
-        worktreeId: workspace.id,
-        worktreePath: workspace.path,
-        branch: workspace.branch,
-      });
-      if (!removeResult.success) {
-        throw new Error(removeResult.error || 'Failed to remove worktree');
+      // Only remove worktree if this is not a direct workspace
+      if (!workspace.metadata?.isDirect) {
+        const removeResult = await window.electronAPI.worktreeRemove({
+          projectPath: targetProject.path,
+          worktreeId: workspace.id,
+          worktreePath: workspace.path,
+          branch: workspace.branch,
+        });
+        if (!removeResult.success) {
+          throw new Error(removeResult.error || 'Failed to remove worktree');
+        }
       }
 
       const result = await window.electronAPI.deleteWorkspace(workspace.id);

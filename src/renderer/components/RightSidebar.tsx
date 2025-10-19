@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import FileChangesPanel from './FileChangesPanel';
 import WorkspaceTerminalPanel from './WorkspaceTerminalPanel';
 import { useRightSidebar } from './ui/right-sidebar';
+import { type WorkspaceMetadata } from '../types/chat';
 
 export interface RightSidebarWorkspace {
   id: string;
@@ -11,6 +12,7 @@ export interface RightSidebarWorkspace {
   path: string;
   status: 'active' | 'idle' | 'running';
   agentId?: string;
+  metadata?: WorkspaceMetadata | null;
 }
 
 interface RightSidebarProps extends React.HTMLAttributes<HTMLElement> {

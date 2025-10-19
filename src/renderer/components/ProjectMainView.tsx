@@ -14,6 +14,7 @@ import WorkspaceDeleteButton from './WorkspaceDeleteButton';
 import AgentSelectionDialog from './AgentSelectionDialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import type { Provider } from '../types';
+import { type Workspace, type WorkspaceMetadata } from '../types/chat';
 
 interface Project {
   id: string;
@@ -29,28 +30,6 @@ interface Project {
     connected: boolean;
   };
   workspaces?: Workspace[];
-}
-
-interface WorkspaceMetadata {
-  linearIssue?: any;
-  initialPrompt?: string | null;
-  pullRequest?: {
-    number: number;
-    title: string;
-    url?: string;
-    author?: string | null;
-    branch?: string;
-  } | null;
-}
-
-interface Workspace {
-  id: string;
-  name: string;
-  branch: string;
-  path: string;
-  status: 'active' | 'idle' | 'running';
-  agentId?: string;
-  metadata?: WorkspaceMetadata | null;
 }
 
 function StatusBadge({ status }: { status: Workspace['status'] }) {

@@ -12,6 +12,7 @@ import { type Provider } from '../types';
 import { Separator } from './ui/separator';
 import { type LinearIssueSummary } from '../types/linear';
 import { LinearIssueSelector } from './LinearIssueSelector';
+import { Switch } from './ui/switch';
 
 interface WorkspaceModalProps {
   isOpen: boolean;
@@ -20,7 +21,8 @@ interface WorkspaceModalProps {
     name: string,
     initialPrompt?: string,
     selectedProvider?: Provider,
-    linkedIssue?: LinearIssueSummary | null
+    linkedIssue?: LinearIssueSummary | null,
+    useWorktree?: boolean
   ) => void;
   projectName: string;
   defaultBranch: string;
@@ -43,6 +45,7 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
   const [touched, setTouched] = useState(false);
   const [initialPrompt, setInitialPrompt] = useState('');
   const [selectedIssue, setSelectedIssue] = useState<LinearIssueSummary | null>(null);
+  const [useWorktree, setUseWorktree] = useState(true);
   const shouldReduceMotion = useReducedMotion();
 
   const normalizedExisting = existingNames.map((n) => n.toLowerCase());
@@ -147,12 +150,14 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
                           convertToWorkspaceName(workspaceName),
                           showAdvanced ? initialPrompt.trim() || undefined : undefined,
                           selectedProvider,
-                          selectedIssue
+                          selectedIssue,
+                          useWorktree
                         );
                         setWorkspaceName('');
                         setInitialPrompt('');
                         setSelectedProvider('codex');
                         setSelectedIssue(null);
+                        setUseWorktree(true);
                         setShowAdvanced(false);
                         setError(null);
                         onClose();
@@ -213,6 +218,24 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
                         className="w-full"
                       />
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex flex-col gap-1">
+                      <label htmlFor="use-worktree" className="text-sm font-medium text-foreground">
+                        Create worktree branch
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        {useWorktree
+                          ? 'Create isolated branch in separate folder'
+                          : 'Work directly in main project folder'}
+                      </p>
+                    </div>
+                    <Switch
+                      id="use-worktree"
+                      checked={useWorktree}
+                      onCheckedChange={setUseWorktree}
+                    />
                   </div>
 
                   <Accordion

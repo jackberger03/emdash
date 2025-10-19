@@ -6,28 +6,7 @@ import { ChangesBadge } from './WorkspaceChanges';
 import { Spinner } from './ui/spinner';
 import { usePrStatus } from '../hooks/usePrStatus';
 import { useWorkspaceBusy } from '../hooks/useWorkspaceBusy';
-
-interface WorkspaceMetadata {
-  linearIssue?: any;
-  initialPrompt?: string | null;
-  pullRequest?: {
-    number: number;
-    title: string;
-    url?: string;
-    author?: string | null;
-    branch?: string;
-  } | null;
-}
-
-interface Workspace {
-  id: string;
-  name: string;
-  branch: string;
-  path: string;
-  status: 'active' | 'idle' | 'running';
-  agentId?: string;
-  metadata?: WorkspaceMetadata | null;
-}
+import { type Workspace, type WorkspaceMetadata } from '../types/chat';
 
 interface WorkspaceItemProps {
   workspace: Workspace;
