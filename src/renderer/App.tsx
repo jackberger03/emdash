@@ -367,6 +367,12 @@ const AppContent: React.FC = () => {
         return;
       }
 
+      // Don't handle other shortcuts if command palette is open
+      // (let the command palette handle them)
+      if (showCommandPalette) {
+        return;
+      }
+
       // Cmd+, for settings
       if (key === ',' || code === 'comma') {
         event.preventDefault();
@@ -376,7 +382,7 @@ const AppContent: React.FC = () => {
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [handleOpenSettings, handleToggleCommandPalette]);
+  }, [handleOpenSettings, handleToggleCommandPalette, showCommandPalette]);
 
   useEffect(() => {
     const rightPanel = rightSidebarPanelRef.current;

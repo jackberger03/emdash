@@ -14,6 +14,7 @@ import {
   ArrowUp,
   ArrowDown,
   Command as CommandIcon,
+  Option,
 } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -45,6 +46,10 @@ type CommandItem = {
   icon: React.ReactNode;
   group: string;
   keywords?: string[];
+  shortcut?: {
+    key: string;
+    modifier?: 'cmd' | 'option';
+  };
   onSelect: () => void;
 };
 
@@ -63,20 +68,62 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [search, setSearch] = useState('');
   const shouldReduceMotion = useReducedMotion();
 
-  // Close on Escape
+  // Handle keyboard shortcuts
   useEffect(() => {
     if (!isOpen || typeof window === 'undefined') return undefined;
 
     const handler = (event: KeyboardEvent) => {
+      // Close on Escape
       if (event.key === 'Escape') {
         event.preventDefault();
         onClose();
+        return;
+      }
+
+      // Check if this is a command shortcut (Cmd/Ctrl + key)
+      if (event.metaKey || event.ctrlKey) {
+        const key = event.key?.toLowerCase();
+        const code = event.code?.toLowerCase();
+
+        // Handle command shortcuts - close palette and trigger action
+        if (key === ',' || code === 'comma') {
+          event.preventDefault();
+          event.stopPropagation();
+          onClose();
+          // Open settings after palette closes
+          if (onOpenSettings) {
+            setTimeout(() => onOpenSettings(), 100);
+          }
+          return;
+        }
+
+        if (key === 'b') {
+          event.preventDefault();
+          event.stopPropagation();
+          onClose();
+          // Toggle left sidebar after palette closes
+          if (onToggleLeftSidebar) {
+            setTimeout(() => onToggleLeftSidebar(), 100);
+          }
+          return;
+        }
+
+        if (key === '.') {
+          event.preventDefault();
+          event.stopPropagation();
+          onClose();
+          // Toggle right sidebar after palette closes
+          if (onToggleRightSidebar) {
+            setTimeout(() => onToggleRightSidebar(), 100);
+          }
+          return;
+        }
       }
     };
 
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, onOpenSettings, onToggleLeftSidebar, onToggleRightSidebar]);
 
   // Reset search when closed
   useEffect(() => {
@@ -132,31 +179,34 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
         icon: <Settings className="h-4 w-4" />,
         group: 'Navigation',
         keywords: ['settings', 'preferences', 'config'],
+        shortcut: { key: ',', modifier: 'cmd' },
         onSelect: () => runCommand(onOpenSettings),
       });
     }
 
-    // View commands
+    // Toggle commands
     if (onToggleLeftSidebar) {
       items.push({
-        id: 'view-toggle-left',
+        id: 'toggle-left',
         label: 'Toggle Left Sidebar',
         description: 'Show/hide project list',
         icon: <PanelLeft className="h-4 w-4" />,
-        group: 'View',
+        group: 'Toggles',
         keywords: ['sidebar', 'panel', 'left', 'toggle'],
+        shortcut: { key: 'B', modifier: 'cmd' },
         onSelect: () => runCommand(onToggleLeftSidebar),
       });
     }
 
     if (onToggleRightSidebar) {
       items.push({
-        id: 'view-toggle-right',
+        id: 'toggle-right',
         label: 'Toggle Right Sidebar',
         description: 'Show/hide details panel',
         icon: <PanelRight className="h-4 w-4" />,
-        group: 'View',
+        group: 'Toggles',
         keywords: ['sidebar', 'panel', 'right', 'toggle'],
+        shortcut: { key: '.', modifier: 'cmd' },
         onSelect: () => runCommand(onToggleRightSidebar),
       });
     }
@@ -220,7 +270,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
     return groups;
   }, [commands]);
 
-  const groupOrder = ['Navigation', 'View', 'Projects', 'Workspaces'];
+  const groupOrder = ['Navigation', 'Toggles', 'Projects', 'Workspaces'];
 
   return createPortal(
     <AnimatePresence>
@@ -294,6 +344,17 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
                               </div>
                             )}
                           </div>
+                          {item.shortcut && (
+                            <div className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                              {item.shortcut.modifier === 'cmd' && (
+                                <CommandIcon className="h-3 w-3" />
+                              )}
+                              {item.shortcut.modifier === 'option' && (
+                                <Option className="h-3 w-3" />
+                              )}
+                              <span className="font-medium">{item.shortcut.key}</span>
+                            </div>
+                          )}
                         </Command.Item>
                       ))}
                     </Command.Group>
