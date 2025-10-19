@@ -1,13 +1,16 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Button } from './ui/button';
 import { Spinner } from './ui/spinner';
 import { useUpdater } from '@/hooks/useUpdater';
+import { useToast } from '@/hooks/use-toast';
 
 const VersionCard: React.FC = () => {
   const [electronVersion, setElectronVersion] = useState<string>('...');
   const [emdashVersion, setEmdashVersion] = useState<string>('...');
   const [platform, setPlatform] = useState<string>('');
   const { state: update, check, download, install, openLatest, progressLabel } = useUpdater();
+  const { toast } = useToast();
+  const userInitiatedRef = useRef(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +65,14 @@ const VersionCard: React.FC = () => {
 
       <div className="flex items-center gap-2">
         {update.status === 'idle' || update.status === 'not-available' ? (
-          <Button size="sm" variant="outline" onClick={check}>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={async () => {
+              userInitiatedRef.current = true;
+              await check();
+            }}
+          >
             Check for updates
           </Button>
         ) : null}
@@ -111,6 +121,25 @@ const VersionCard: React.FC = () => {
           </div>
         ) : null}
       </div>
+
+      {/* Notify user on manual check when already up to date */}
+      {(() => {
+        // Effect-like block: react hooks must be top-level; use a nested IIFE to keep file tidy
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          if (update.status === 'not-available' && userInitiatedRef.current) {
+            userInitiatedRef.current = false;
+            try {
+              toast({ title: 'You’re up to date', description: 'You are on the latest version.' });
+            } catch {}
+          }
+          if (update.status !== 'checking' && update.status !== 'idle') {
+            // Reset guard if state moves elsewhere without landing on not-available
+            userInitiatedRef.current = false;
+          }
+        }, [update.status]);
+        return null;
+      })()}
     </div>
   );
 };
