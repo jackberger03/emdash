@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from './components/ui/button';
 
 import { FolderOpen } from 'lucide-react';
@@ -26,30 +26,31 @@ import { loadPanelSizes, savePanelSizes } from './lib/persisted-layout';
 import type { ImperativePanelHandle } from 'react-resizable-panels';
 import SettingsModal from './components/SettingsModal';
 import CommandPalette from './components/CommandPalette';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 const SidebarHotkeys: React.FC = () => {
   const { toggle: toggleLeftSidebar } = useSidebar();
   const { toggle: toggleRightSidebar } = useRightSidebar();
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const handler = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'b') {
-        event.preventDefault();
-        toggleLeftSidebar();
-      }
+  const sidebarShortcuts = useMemo(
+    () => [
+      {
+        key: 'b',
+        modifier: 'cmd' as const,
+        handler: () => toggleLeftSidebar(),
+        description: 'Toggle left sidebar',
+      },
+      {
+        key: '.',
+        modifier: 'cmd' as const,
+        handler: () => toggleRightSidebar(),
+        description: 'Toggle right sidebar',
+      },
+    ],
+    [toggleLeftSidebar, toggleRightSidebar]
+  );
 
-      const isRightPanelHotkey = event.key === '.' || event.code?.toLowerCase() === 'period';
-
-      if ((event.metaKey || event.ctrlKey) && isRightPanelHotkey) {
-        event.preventDefault();
-        toggleRightSidebar();
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [toggleLeftSidebar, toggleRightSidebar]);
+  useKeyboardShortcuts({ enabled: true, shortcuts: sidebarShortcuts });
 
   return null;
 };
@@ -349,40 +350,31 @@ const AppContent: React.FC = () => {
     setShowCommandPalette(false);
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
+  // Global keyboard shortcuts
+  const globalShortcuts = useMemo(
+    () => [
+      {
+        key: 'k',
+        modifier: 'cmd' as const,
+        handler: () => handleToggleCommandPalette(),
+        description: 'Toggle command palette',
+      },
+      {
+        key: ',',
+        modifier: 'cmd' as const,
+        handler: () => {
+          // Only handle if command palette is not open
+          if (!showCommandPalette) {
+            handleOpenSettings();
+          }
+        },
+        description: 'Open settings',
+      },
+    ],
+    [handleToggleCommandPalette, handleOpenSettings, showCommandPalette]
+  );
 
-    const handler = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey)) {
-        return;
-      }
-
-      const key = event.key?.toLowerCase();
-      const code = event.code?.toLowerCase();
-
-      // Cmd+K for command palette
-      if (key === 'k') {
-        event.preventDefault();
-        handleToggleCommandPalette();
-        return;
-      }
-
-      // Don't handle other shortcuts if command palette is open
-      // (let the command palette handle them)
-      if (showCommandPalette) {
-        return;
-      }
-
-      // Cmd+, for settings
-      if (key === ',' || code === 'comma') {
-        event.preventDefault();
-        handleOpenSettings();
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleOpenSettings, handleToggleCommandPalette, showCommandPalette]);
+  useKeyboardShortcuts({ enabled: true, shortcuts: globalShortcuts });
 
   useEffect(() => {
     const rightPanel = rightSidebarPanelRef.current;

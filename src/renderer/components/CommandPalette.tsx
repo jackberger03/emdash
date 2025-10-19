@@ -16,6 +16,7 @@ import {
   Command as CommandIcon,
   Option,
 } from 'lucide-react';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -68,62 +69,56 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [search, setSearch] = useState('');
   const shouldReduceMotion = useReducedMotion();
 
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    if (!isOpen || typeof window === 'undefined') return undefined;
-
-    const handler = (event: KeyboardEvent) => {
-      // Close on Escape
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-        return;
-      }
-
-      // Check if this is a command shortcut (Cmd/Ctrl + key)
-      if (event.metaKey || event.ctrlKey) {
-        const key = event.key?.toLowerCase();
-        const code = event.code?.toLowerCase();
-
-        // Handle command shortcuts - close palette and trigger action
-        if (key === ',' || code === 'comma') {
-          event.preventDefault();
-          event.stopPropagation();
+  // Define keyboard shortcuts for the command palette
+  const shortcuts = useMemo(
+    () => [
+      {
+        key: 'Escape',
+        handler: () => onClose(),
+        description: 'Close command palette',
+      },
+      {
+        key: ',',
+        modifier: 'cmd' as const,
+        handler: () => {
           onClose();
-          // Open settings after palette closes
           if (onOpenSettings) {
             setTimeout(() => onOpenSettings(), 100);
           }
-          return;
-        }
-
-        if (key === 'b') {
-          event.preventDefault();
-          event.stopPropagation();
+        },
+        stopPropagation: true,
+        description: 'Open settings',
+      },
+      {
+        key: 'b',
+        modifier: 'cmd' as const,
+        handler: () => {
           onClose();
-          // Toggle left sidebar after palette closes
           if (onToggleLeftSidebar) {
             setTimeout(() => onToggleLeftSidebar(), 100);
           }
-          return;
-        }
-
-        if (key === '.') {
-          event.preventDefault();
-          event.stopPropagation();
+        },
+        stopPropagation: true,
+        description: 'Toggle left sidebar',
+      },
+      {
+        key: '.',
+        modifier: 'cmd' as const,
+        handler: () => {
           onClose();
-          // Toggle right sidebar after palette closes
           if (onToggleRightSidebar) {
             setTimeout(() => onToggleRightSidebar(), 100);
           }
-          return;
-        }
-      }
-    };
+        },
+        stopPropagation: true,
+        description: 'Toggle right sidebar',
+      },
+    ],
+    [onClose, onOpenSettings, onToggleLeftSidebar, onToggleRightSidebar]
+  );
 
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onClose, onOpenSettings, onToggleLeftSidebar, onToggleRightSidebar]);
+  // Use keyboard shortcuts hook
+  useKeyboardShortcuts({ enabled: isOpen, shortcuts });
 
   // Reset search when closed
   useEffect(() => {

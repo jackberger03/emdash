@@ -9,6 +9,7 @@ import IntegrationsCard from './IntegrationsCard';
 import CliProvidersList, { BASE_CLI_PROVIDERS } from './CliProvidersList';
 import TelemetryCard from './TelemetryCard';
 import ThemeCard from './ThemeCard';
+import { useKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 
 import { CliProviderStatus } from '../types/connections';
 import { Separator } from './ui/separator';
@@ -65,19 +66,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
     }
   }, [isOpen]);
 
-  useEffect(() => {
-    if (!isOpen || typeof window === 'undefined') return undefined;
+  // Keyboard shortcuts for settings modal
+  const shortcuts = useMemo(
+    () => [
+      {
+        key: 'Escape',
+        handler: () => onClose(),
+        description: 'Close settings',
+      },
+    ],
+    [onClose]
+  );
 
-    const handler = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        event.preventDefault();
-        onClose();
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [isOpen, onClose]);
+  useKeyboardShortcuts({ enabled: isOpen, shortcuts });
 
   const fetchCliProviders = useCallback(async () => {
     if (!window?.electronAPI?.getCliProviders) {
