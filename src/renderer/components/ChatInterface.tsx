@@ -598,14 +598,16 @@ const ChatInterface: React.FC<Props> = ({
         </>
       )}
 
-      {isTerminal ? (
-        <ProviderBar
-          provider={provider}
-          linearIssue={workspace.metadata?.linearIssue || null}
-          onProviderChange={handleProviderChange}
-          allowChange={true}
-        />
-      ) : null}
+      <ProviderBar
+        provider={provider}
+        linearIssue={workspace.metadata?.linearIssue || null}
+        onProviderChange={handleProviderChange}
+        allowChange={isTerminal ? true : !providerLocked}
+        workspaceId={workspace.id}
+        workspacePath={workspace.path}
+        theme={effectiveTheme === 'dark' ? 'dark' : 'light'}
+        branch={workspace.branch}
+      />
     </div>
   );
 };

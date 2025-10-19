@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ExternalLink, ChevronDown } from 'lucide-react';
+import { ExternalLink, ChevronDown, Terminal } from 'lucide-react';
 import { type Provider } from '../types';
 import { type LinearIssueSummary } from '../types/linear';
+import { TerminalPane } from './TerminalPane';
 import openaiLogo from '../../assets/images/openai.png';
 import linearLogo from '../../assets/images/linear.png';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
@@ -21,6 +22,10 @@ type Props = {
   linearIssue?: LinearIssueSummary | null;
   onProviderChange?: (provider: Provider) => void;
   allowChange?: boolean;
+  workspaceId?: string;
+  workspacePath?: string;
+  theme?: 'dark' | 'light';
+  branch?: string;
 };
 
 export const ProviderBar: React.FC<Props> = ({
@@ -28,8 +33,13 @@ export const ProviderBar: React.FC<Props> = ({
   linearIssue,
   onProviderChange,
   allowChange = true,
+  workspaceId,
+  workspacePath,
+  theme = 'dark',
+  branch,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
@@ -76,6 +86,11 @@ export const ProviderBar: React.FC<Props> = ({
 
   const cfg = map[provider] ?? { name: provider, logo: '' };
 
+  // Extract folder name from path
+  const folderName = workspacePath
+    ? workspacePath.split('/').filter(Boolean).pop() || workspacePath
+    : '';
+
   const handleProviderSelect = (newProvider: Provider) => {
     setShowDropdown(false);
     if (onProviderChange && newProvider !== provider) {
@@ -88,9 +103,24 @@ export const ProviderBar: React.FC<Props> = ({
       <div className="mx-auto max-w-4xl">
         <div
           ref={dropdownRef}
-          className="relative rounded-md border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800"
+          className={`relative rounded-md border border-gray-200 bg-white shadow-lg transition-all duration-200 dark:border-gray-700 dark:bg-gray-800 ${
+            showTerminal ? 'h-64' : ''
+          }`}
         >
-          <div className="flex items-center rounded-md px-4 py-3">
+          {/* Terminal Section - Shows when expanded */}
+          {showTerminal && workspaceId && workspacePath && (
+            <div className="h-48 overflow-hidden border-b border-gray-200 p-3 dark:border-gray-700">
+              <TerminalPane
+                id={`${workspaceId}-provider-terminal`}
+                cwd={workspacePath}
+                variant={theme}
+                className="h-full w-full"
+                rows={10}
+              />
+            </div>
+          )}
+
+          <div className="flex items-center justify-between rounded-md px-4 py-3">
             <div className="flex items-center gap-3">
               <TooltipProvider delayDuration={250}>
                 <Tooltip>
@@ -256,6 +286,61 @@ export const ProviderBar: React.FC<Props> = ({
                   </Tooltip>
                 </TooltipProvider>
               ) : null}
+            </div>
+
+            {/* Right side - Folder/Branch Info + Terminal Button */}
+            <div className="flex items-center gap-3">
+              {/* Folder and Branch Info */}
+              {(folderName || branch) && (
+                <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
+                  {folderName && <span className="font-medium">{folderName}</span>}
+                  {folderName && branch && <span>•</span>}
+                  {branch && (
+                    <span className="flex items-center gap-1">
+                      <svg
+                        className="h-3 w-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"
+                        />
+                      </svg>
+                      <span className="font-medium">{branch}</span>
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* Terminal Toggle Button */}
+              {workspaceId && workspacePath && (
+                <TooltipProvider delayDuration={250}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className={`inline-flex h-7 items-center gap-1.5 rounded-md border px-2 text-xs transition-colors ${
+                          showTerminal
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 dark:border-blue-600 dark:bg-blue-950 dark:text-blue-300'
+                            : 'border-gray-200 bg-gray-100 text-gray-700 hover:bg-gray-200 dark:border-gray-700 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                        onClick={() => setShowTerminal(!showTerminal)}
+                        title={showTerminal ? 'Hide Terminal' : 'Show Terminal'}
+                      >
+                        <Terminal className="h-3.5 w-3.5" />
+                        <span className="font-medium">Terminal</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{showTerminal ? 'Hide Terminal' : 'Show Terminal'}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
             </div>
           </div>
         </div>

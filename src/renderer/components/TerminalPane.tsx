@@ -200,6 +200,7 @@ const TerminalPaneComponent: React.FC<Props> = ({
     (async () => {
       try {
         console.log('[TerminalPane] Starting PTY:', { id, cwd, shell });
+
         const res = await window.electronAPI.ptyStart({
           id,
           cwd,
@@ -220,6 +221,15 @@ const TerminalPaneComponent: React.FC<Props> = ({
         }
         if (res?.ok) {
           console.log('[TerminalPane] PTY started successfully:', id);
+
+          // Inject minimal prompt command after shell starts
+          // Small delay to ensure shell is ready
+          setTimeout(() => {
+            // Empty prompt - just cursor, no text
+            const promptCmd = 'PROMPT=""; clear\n';
+            window.electronAPI.ptyInput({ id, data: promptCmd });
+          }, 150);
+
           try {
             onStartSuccess && onStartSuccess();
           } catch {}
