@@ -9,7 +9,16 @@ import { useFileChanges } from '../hooks/useFileChanges';
 import { usePrStatus } from '../hooks/usePrStatus';
 import PrStatusSkeleton from './ui/pr-status-skeleton';
 import FileTypeIcon from './ui/file-type-icon';
-import { Plus, Undo2 } from 'lucide-react';
+import {
+  Plus,
+  Undo2,
+  RefreshCw,
+  Check,
+  Upload,
+  Download,
+  ArrowUpDown,
+  GitBranch,
+} from 'lucide-react';
 
 interface FileChangesPanelProps {
   workspaceId: string;
@@ -28,6 +37,12 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
   const [revertingFiles, setRevertingFiles] = useState<Set<string>>(new Set());
   const [commitMessage, setCommitMessage] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
+  const [isPushing, setIsPushing] = useState(false);
+  const [isPulling, setIsPulling] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [isStaging, setIsStaging] = useState(false);
+  const [isUnstaging, setIsUnstaging] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const { isCreating: isCreatingPR, createPR } = useCreatePR();
 
   // Extract PR base branch from metadata for PR workspaces
@@ -145,6 +160,231 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
     }
   };
 
+  const handleStageAll = async () => {
+    setIsStaging(true);
+    try {
+      const result = await window.electronAPI.stageAll({ workspacePath: workspaceId });
+      if (result.success) {
+        await refreshChanges();
+        toast({
+          title: 'All Files Staged',
+          description: 'All changes have been staged successfully.',
+        });
+      } else {
+        toast({
+          title: 'Stage All Failed',
+          description: result.error || 'Failed to stage all files.',
+          variant: 'destructive',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Stage All Failed',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsStaging(false);
+    }
+  };
+
+  const handleUnstageAll = async () => {
+    setIsUnstaging(true);
+    try {
+      const result = await window.electronAPI.unstageAll({ workspacePath: workspaceId });
+      if (result.success) {
+        await refreshChanges();
+        toast({
+          title: 'All Files Unstaged',
+          description: 'All staged changes have been unstaged.',
+        });
+      } else {
+        toast({
+          title: 'Unstage All Failed',
+          description: result.error || 'Failed to unstage all files.',
+          variant: 'destructive',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Unstage All Failed',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUnstaging(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshChanges();
+      await refreshPr();
+    } catch (_error) {
+      // Silent fail
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const handleCommit = async () => {
+    if (!commitMessage.trim()) {
+      toast({
+        title: 'Commit Message Required',
+        description: 'Please enter a commit message.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!hasStagedChanges) {
+      toast({
+        title: 'No Staged Changes',
+        description: 'Please stage some files before committing.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsCommitting(true);
+    try {
+      const result = await window.electronAPI.gitCommit({
+        workspacePath: workspaceId,
+        message: commitMessage.trim(),
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Committed',
+          description: `Changes committed with message: "${commitMessage.trim()}"`,
+        });
+        setCommitMessage('');
+        await refreshChanges();
+      } else {
+        toast({
+          title: 'Commit Failed',
+          description: result.error || 'Failed to commit changes.',
+          variant: 'destructive',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Commit Failed',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsCommitting(false);
+    }
+  };
+
+  const handlePush = async () => {
+    setIsPushing(true);
+    try {
+      const result = await window.electronAPI.gitPush({ workspacePath: workspaceId });
+
+      if (result.success) {
+        toast({
+          title: 'Pushed',
+          description: `Changes pushed to ${result.branch || 'remote'}`,
+        });
+        await refreshChanges();
+        try {
+          await refreshPr();
+        } catch {}
+      } else {
+        toast({
+          title: 'Push Failed',
+          description: result.error || 'Failed to push changes.',
+          variant: 'destructive',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Push Failed',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPushing(false);
+    }
+  };
+
+  const handlePull = async () => {
+    setIsPulling(true);
+    try {
+      const result = await window.electronAPI.gitPull({ workspacePath: workspaceId });
+
+      if (result.success) {
+        toast({
+          title: 'Pulled',
+          description: 'Changes pulled from remote successfully.',
+        });
+        await refreshChanges();
+      } else {
+        toast({
+          title: 'Pull Failed',
+          description: result.error || 'Failed to pull changes.',
+          variant: 'destructive',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Pull Failed',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsPulling(false);
+    }
+  };
+
+  const handleSync = async () => {
+    if (hasStagedChanges && !commitMessage.trim()) {
+      toast({
+        title: 'Commit Message Required',
+        description: 'Please enter a commit message before syncing.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const result = await window.electronAPI.gitSync({
+        workspacePath: workspaceId,
+        commitMessage: hasStagedChanges ? commitMessage.trim() : undefined,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'Synced',
+          description: `Changes synced to ${result.branch || 'remote'}`,
+        });
+        setCommitMessage('');
+        await refreshChanges();
+        try {
+          await refreshPr();
+        } catch {}
+      } else {
+        toast({
+          title: 'Sync Failed',
+          description: result.error || 'Failed to sync changes.',
+          variant: 'destructive',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Sync Failed',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleCommitAndPush = async () => {
     if (!commitMessage.trim()) {
       toast({
@@ -223,6 +463,9 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
     );
   };
 
+  const stagedChanges = fileChanges.filter((f) => f.isStaged);
+  const unstagedChanges = fileChanges.filter((f) => !f.isStaged);
+
   const totalChanges = fileChanges.reduce(
     (acc, change) => ({
       additions: acc.additions + change.additions,
@@ -231,206 +474,276 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
     { additions: 0, deletions: 0 }
   );
 
-  return (
-    <div className={`flex h-full flex-col bg-white shadow-sm dark:bg-gray-800 ${className}`}>
-      <div className="bg-gray-50 px-3 py-2 dark:bg-gray-900">
-        {hasChanges ? (
-          <div className="space-y-3">
-            {/* File count and stats */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                  {fileChanges.length} files changed
-                </span>
-                <div className="flex items-center space-x-1 text-xs">
-                  <span className="font-medium text-green-600 dark:text-green-400">
-                    +{totalChanges.additions}
-                  </span>
-                  <span className="text-gray-400">•</span>
-                  <span className="font-medium text-red-600 dark:text-red-400">
-                    -{totalChanges.deletions}
-                  </span>
-                </div>
-                {hasStagedChanges && (
-                  <span className="rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-800 dark:bg-gray-900/30 dark:text-gray-300">
-                    {fileChanges.filter((f) => f.isStaged).length} staged
-                  </span>
-                )}
-              </div>
-              {!isPRWorkspace && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 border-gray-200 px-2 text-xs text-gray-700 dark:border-gray-700 dark:text-gray-200"
-                  disabled={isCreatingPR}
-                  title="Commit all changes and create a pull request"
-                  onClick={async () => {
-                    await createPR({
-                      workspacePath: workspaceId,
-                      onSuccess: async () => {
-                        await refreshChanges();
-                        try {
-                          await refreshPr();
-                        } catch {}
-                      },
-                    });
-                  }}
-                >
-                  {isCreatingPR ? <Spinner size="sm" /> : 'Create PR'}
-                </Button>
-              )}
-            </div>
-
-            {hasStagedChanges && (
-              <div className="flex items-center space-x-2">
-                <Input
-                  placeholder="Enter commit message..."
-                  value={commitMessage}
-                  onChange={(e) => setCommitMessage(e.target.value)}
-                  className="h-8 flex-1 text-sm"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleCommitAndPush();
-                    }
-                  }}
-                />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 border-gray-200 px-2 text-xs text-gray-700 dark:border-gray-700 dark:text-gray-200"
-                  title="Commit all staged changes and push the branch"
-                  onClick={handleCommitAndPush}
-                  disabled={isCommitting || !commitMessage.trim()}
-                >
-                  {isCommitting ? <Spinner size="sm" /> : 'Commit & Push'}
-                </Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="flex w-full items-center justify-between">
-            <div className="flex items-center gap-2 p-2">
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">Changes</span>
-            </div>
-            <div className="flex items-center gap-2">
-              {prLoading ? (
-                <PrStatusSkeleton />
-              ) : pr ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    window.electronAPI?.openExternal?.(pr.url);
-                  }}
-                  className="cursor-pointer rounded border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
-                  title={pr.title || 'Pull Request'}
-                >
-                  PR {pr.isDraft ? 'draft' : pr.state.toLowerCase()}
-                </button>
-              ) : !isPRWorkspace &&
-                (branchStatusLoading || (branchAhead !== null && branchAhead > 0)) ? (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 border-gray-200 px-2 text-xs text-gray-700 dark:border-gray-700 dark:text-gray-200"
-                  disabled={isCreatingPR || branchStatusLoading}
-                  title="Create a pull request for the current branch"
-                  onClick={async () => {
-                    await createPR({
-                      workspacePath: workspaceId,
-                      onSuccess: async () => {
-                        await refreshChanges();
-                        try {
-                          await refreshPr();
-                        } catch {}
-                      },
-                    });
-                  }}
-                >
-                  {isCreatingPR || branchStatusLoading ? <Spinner size="sm" /> : 'Create PR'}
-                </Button>
-              ) : !isPRWorkspace ? (
-                <span className="text-xs text-gray-500">No PR for this branch</span>
-              ) : null}
+  const renderFileList = (files: typeof fileChanges, isStaged: boolean) => (
+    <>
+      {files.map((change, index) => (
+        <div
+          key={index}
+          className={`flex cursor-pointer items-center justify-between border-b border-gray-100 px-4 py-2.5 last:border-b-0 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900/40`}
+          onClick={() => {
+            setSelectedPath(change.path);
+            setShowDiffModal(true);
+          }}
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-3">
+            <span className="inline-flex h-4 w-4 items-center justify-center text-gray-500">
+              <FileTypeIcon
+                path={change.path}
+                type={change.status === 'deleted' ? 'file' : 'file'}
+                size={14}
+              />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm">{renderPath(change.path)}</div>
             </div>
           </div>
-        )}
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {fileChanges.map((change, index) => (
-          <div
-            key={index}
-            className={`flex cursor-pointer items-center justify-between border-b border-gray-100 px-4 py-2.5 last:border-b-0 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-900/40 ${
-              change.isStaged ? 'bg-gray-50 dark:bg-gray-900/40' : ''
-            }`}
-            onClick={() => {
-              setSelectedPath(change.path);
-              setShowDiffModal(true);
-            }}
-          >
-            <div className="flex min-w-0 flex-1 items-center gap-3">
-              <span className="inline-flex h-4 w-4 items-center justify-center text-gray-500">
-                <FileTypeIcon
-                  path={change.path}
-                  type={change.status === 'deleted' ? 'file' : 'file'}
-                  size={14}
-                />
+          <div className="ml-3 flex items-center gap-2">
+            {change.additions > 0 && (
+              <span className="rounded bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-green-900/30 dark:text-emerald-300">
+                +{change.additions}
               </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm">{renderPath(change.path)}</div>
-              </div>
-            </div>
-            <div className="ml-3 flex items-center gap-2">
-              {change.additions > 0 && (
-                <span className="rounded bg-green-50 px-1.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-green-900/30 dark:text-emerald-300">
-                  +{change.additions}
-                </span>
-              )}
-              {change.deletions > 0 && (
-                <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
-                  -{change.deletions}
-                </span>
-              )}
-              <div className="flex items-center gap-1">
-                {!change.isStaged && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
-                    onClick={(e) => handleStageFile(change.path, e)}
-                    disabled={stagingFiles.has(change.path)}
-                    title="Stage file for commit"
-                  >
-                    {stagingFiles.has(change.path) ? (
-                      <Spinner size="sm" />
-                    ) : (
-                      <Plus className="h-3 w-3" />
-                    )}
-                  </Button>
-                )}
+            )}
+            {change.deletions > 0 && (
+              <span className="rounded bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                -{change.deletions}
+              </span>
+            )}
+            <div className="flex items-center gap-1">
+              {!isStaged && (
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
-                  onClick={(e) => handleRevertFile(change.path, e)}
-                  disabled={revertingFiles.has(change.path)}
-                  title={
-                    change.isStaged
-                      ? 'Unstage file (click again to revert)'
-                      : 'Revert changes to file'
-                  }
+                  onClick={(e) => handleStageFile(change.path, e)}
+                  disabled={stagingFiles.has(change.path)}
+                  title="Stage file for commit"
                 >
-                  {revertingFiles.has(change.path) ? (
+                  {stagingFiles.has(change.path) ? (
                     <Spinner size="sm" />
                   ) : (
-                    <Undo2 className="h-3 w-3" />
+                    <Plus className="h-3 w-3" />
                   )}
                 </Button>
-              </div>
+              )}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
+                onClick={(e) => handleRevertFile(change.path, e)}
+                disabled={revertingFiles.has(change.path)}
+                title={isStaged ? 'Unstage file (click again to revert)' : 'Revert changes to file'}
+              >
+                {revertingFiles.has(change.path) ? (
+                  <Spinner size="sm" />
+                ) : (
+                  <Undo2 className="h-3 w-3" />
+                )}
+              </Button>
             </div>
           </div>
-        ))}
+        </div>
+      ))}
+    </>
+  );
+
+  return (
+    <div className={`flex h-full flex-col bg-white shadow-sm dark:bg-gray-800 ${className}`}>
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
+        <div className="flex items-center gap-2">
+          <GitBranch className="h-4 w-4 text-gray-500" />
+          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+            Source Control
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            title="Refresh"
+          >
+            {isRefreshing ? (
+              <Spinner size="sm" />
+            ) : (
+              <RefreshCw className="h-3.5 w-3.5 text-gray-500" />
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {/* Commit Controls */}
+      {hasStagedChanges && (
+        <div className="border-b border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
+          <Input
+            placeholder="Commit message..."
+            value={commitMessage}
+            onChange={(e) => setCommitMessage(e.target.value)}
+            className="mb-2 h-8 text-sm"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.ctrlKey) {
+                e.preventDefault();
+                handleCommit();
+              }
+            }}
+          />
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 flex-1 text-xs"
+              onClick={handleCommit}
+              disabled={isCommitting || !commitMessage.trim()}
+              title="Commit (Ctrl+Enter)"
+            >
+              {isCommitting ? (
+                <Spinner size="sm" />
+              ) : (
+                <>
+                  <Check className="mr-1 h-3 w-3" />
+                  Commit
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={handleSync}
+              disabled={isSyncing || !commitMessage.trim()}
+              title="Commit and Sync (pull + push)"
+            >
+              {isSyncing ? <Spinner size="sm" /> : <ArrowUpDown className="h-3 w-3" />}
+            </Button>
+          </div>
+          <div className="mt-2 flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 flex-1 text-xs"
+              onClick={handlePull}
+              disabled={isPulling}
+              title="Pull from remote"
+            >
+              {isPulling ? (
+                <Spinner size="sm" />
+              ) : (
+                <>
+                  <Download className="mr-1 h-3 w-3" />
+                  Pull
+                </>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 flex-1 text-xs"
+              onClick={handlePush}
+              disabled={isPushing}
+              title="Push to remote"
+            >
+              {isPushing ? (
+                <Spinner size="sm" />
+              ) : (
+                <>
+                  <Upload className="mr-1 h-3 w-3" />
+                  Push
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* PR Status */}
+      {!hasChanges && (
+        <div className="border-b border-gray-200 bg-gray-50 px-3 py-2 dark:border-gray-700 dark:bg-gray-900">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">No changes</span>
+            {prLoading ? (
+              <PrStatusSkeleton />
+            ) : pr ? (
+              <button
+                type="button"
+                onClick={() => window.electronAPI?.openExternal?.(pr.url)}
+                className="cursor-pointer rounded border border-border bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
+                title={pr.title || 'Pull Request'}
+              >
+                PR {pr.isDraft ? 'draft' : pr.state.toLowerCase()}
+              </button>
+            ) : !isPRWorkspace &&
+              (branchStatusLoading || (branchAhead !== null && branchAhead > 0)) ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                disabled={isCreatingPR || branchStatusLoading}
+                onClick={async () => {
+                  await createPR({
+                    workspacePath: workspaceId,
+                    onSuccess: async () => {
+                      await refreshChanges();
+                      try {
+                        await refreshPr();
+                      } catch {}
+                    },
+                  });
+                }}
+              >
+                {isCreatingPR || branchStatusLoading ? <Spinner size="sm" /> : 'Create PR'}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* File Lists */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {/* Staged Changes */}
+        {stagedChanges.length > 0 && (
+          <div>
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-900">
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                Staged Changes ({stagedChanges.length})
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-2 text-xs"
+                onClick={handleUnstageAll}
+                disabled={isUnstaging}
+                title="Unstage all files"
+              >
+                {isUnstaging ? <Spinner size="sm" /> : 'Unstage All'}
+              </Button>
+            </div>
+            {renderFileList(stagedChanges, true)}
+          </div>
+        )}
+
+        {/* Unstaged Changes */}
+        {unstagedChanges.length > 0 && (
+          <div>
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-900">
+              <span className="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                Changes ({unstagedChanges.length})
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-5 px-2 text-xs"
+                onClick={handleStageAll}
+                disabled={isStaging}
+                title="Stage all files"
+              >
+                {isStaging ? <Spinner size="sm" /> : 'Stage All'}
+              </Button>
+            </div>
+            {renderFileList(unstagedChanges, false)}
+          </div>
+        )}
       </div>
       {showDiffModal && (
         <ChangesDiffModal

@@ -232,6 +232,123 @@ export async function getPRBranchChanges(
   }
 }
 
+export async function stageAll(workspacePath: string): Promise<void> {
+  await execFileAsync('git', ['add', '-A'], { cwd: workspacePath });
+}
+
+export async function unstageAll(workspacePath: string): Promise<void> {
+  await execFileAsync('git', ['reset', 'HEAD', '--'], { cwd: workspacePath });
+}
+
+export async function gitCommit(
+  workspacePath: string,
+  message: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await execFileAsync('git', ['commit', '-m', message], { cwd: workspacePath });
+    return { success: true };
+  } catch (error: any) {
+    if (error.message && /nothing to commit/i.test(error.message)) {
+      return { success: false, error: 'Nothing to commit' };
+    }
+    throw error;
+  }
+}
+
+export async function gitPush(
+  workspacePath: string
+): Promise<{ success: boolean; branch?: string; error?: string }> {
+  try {
+    // Try regular push first
+    await execFileAsync('git', ['push'], { cwd: workspacePath });
+    const { stdout: branchOut } = await execFileAsync('git', ['branch', '--show-current'], {
+      cwd: workspacePath,
+    });
+    return { success: true, branch: branchOut.trim() };
+  } catch (error: any) {
+    // If push fails, try setting upstream
+    try {
+      const { stdout: branchOut } = await execFileAsync('git', ['branch', '--show-current'], {
+        cwd: workspacePath,
+      });
+      const branch = branchOut.trim();
+      await execFileAsync('git', ['push', '--set-upstream', 'origin', branch], {
+        cwd: workspacePath,
+      });
+      return { success: true, branch };
+    } catch (upstreamError: any) {
+      return {
+        success: false,
+        error: upstreamError.message || 'Failed to push to remote',
+      };
+    }
+  }
+}
+
+export async function gitPull(
+  workspacePath: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await execFileAsync('git', ['pull'], { cwd: workspacePath });
+    return { success: true };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Failed to pull from remote',
+    };
+  }
+}
+
+export async function gitSync(
+  workspacePath: string,
+  commitMessage?: string
+): Promise<{ success: boolean; error?: string; branch?: string }> {
+  try {
+    // 1. Commit if there are staged changes
+    if (commitMessage) {
+      try {
+        await execFileAsync('git', ['commit', '-m', commitMessage], { cwd: workspacePath });
+      } catch (error: any) {
+        if (!error.message || !/nothing to commit/i.test(error.message)) {
+          throw error;
+        }
+      }
+    }
+
+    // 2. Pull
+    try {
+      await execFileAsync('git', ['pull', '--rebase'], { cwd: workspacePath });
+    } catch (pullError: any) {
+      // If pull fails due to no upstream, continue to push
+      if (!/no tracking information/i.test(pullError.message)) {
+        throw pullError;
+      }
+    }
+
+    // 3. Push
+    const { stdout: branchOut } = await execFileAsync('git', ['branch', '--show-current'], {
+      cwd: workspacePath,
+    });
+    const branch = branchOut.trim();
+
+    try {
+      await execFileAsync('git', ['push'], { cwd: workspacePath });
+    } catch {
+      // Set upstream if needed
+      await execFileAsync('git', ['push', '--set-upstream', 'origin', branch], {
+        cwd: workspacePath,
+      });
+    }
+
+    return { success: true, branch };
+  } catch (error: any) {
+    return {
+      success: false,
+      error: error.message || 'Sync failed',
+    };
+  }
+}
+
 export async function getFileDiff(
   workspacePath: string,
   filePath: string

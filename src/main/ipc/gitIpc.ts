@@ -8,6 +8,12 @@ import {
   getPRBranchChanges as gitGetPRBranchChanges,
   stageFile as gitStageFile,
   revertFile as gitRevertFile,
+  stageAll as gitStageAll,
+  unstageAll as gitUnstageAll,
+  gitCommit,
+  gitPush,
+  gitPull,
+  gitSync,
 } from '../services/GitService';
 
 const execAsync = promisify(exec);
@@ -415,6 +421,95 @@ current branch '${currentBranch}' ahead of base '${baseRef}'.`,
       }
     }
   );
+
+  // Git: Stage all files
+  ipcMain.handle('git:stage-all', async (_, args: { workspacePath: string }) => {
+    try {
+      log.info('Staging all files:', { workspacePath: args.workspacePath });
+      await gitStageAll(args.workspacePath);
+      log.info('All files staged successfully');
+      return { success: true };
+    } catch (error) {
+      log.error('Failed to stage all files:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Git: Unstage all files
+  ipcMain.handle('git:unstage-all', async (_, args: { workspacePath: string }) => {
+    try {
+      log.info('Unstaging all files:', { workspacePath: args.workspacePath });
+      await gitUnstageAll(args.workspacePath);
+      log.info('All files unstaged successfully');
+      return { success: true };
+    } catch (error) {
+      log.error('Failed to unstage all files:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Git: Commit (without push)
+  ipcMain.handle('git:commit', async (_, args: { workspacePath: string; message: string }) => {
+    try {
+      log.info('Committing changes:', { workspacePath: args.workspacePath });
+      const result = await gitCommit(args.workspacePath, args.message);
+      if (result.success) {
+        log.info('Changes committed successfully');
+      }
+      return result;
+    } catch (error) {
+      log.error('Failed to commit:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Git: Push
+  ipcMain.handle('git:push', async (_, args: { workspacePath: string }) => {
+    try {
+      log.info('Pushing changes:', { workspacePath: args.workspacePath });
+      const result = await gitPush(args.workspacePath);
+      if (result.success) {
+        log.info('Changes pushed successfully to branch:', result.branch);
+      }
+      return result;
+    } catch (error) {
+      log.error('Failed to push:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Git: Pull
+  ipcMain.handle('git:pull', async (_, args: { workspacePath: string }) => {
+    try {
+      log.info('Pulling changes:', { workspacePath: args.workspacePath });
+      const result = await gitPull(args.workspacePath);
+      if (result.success) {
+        log.info('Changes pulled successfully');
+      }
+      return result;
+    } catch (error) {
+      log.error('Failed to pull:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
+
+  // Git: Sync (commit + pull + push)
+  ipcMain.handle('git:sync', async (_, args: { workspacePath: string; commitMessage?: string }) => {
+    try {
+      log.info('Syncing changes:', {
+        workspacePath: args.workspacePath,
+        hasCommitMessage: !!args.commitMessage,
+      });
+      const result = await gitSync(args.workspacePath, args.commitMessage);
+      if (result.success) {
+        log.info('Changes synced successfully to branch:', result.branch);
+      }
+      return result;
+    } catch (error) {
+      log.error('Failed to sync:', error);
+      return { success: false, error: error instanceof Error ? error.message : String(error) };
+    }
+  });
 
   // Git: Get branch status (current branch, default branch, ahead/behind counts)
   ipcMain.handle('git:get-branch-status', async (_, args: { workspacePath: string }) => {

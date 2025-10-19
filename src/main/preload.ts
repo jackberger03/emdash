@@ -105,8 +105,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('git:get-file-diff', args),
   stageFile: (args: { workspacePath: string; filePath: string }) =>
     ipcRenderer.invoke('git:stage-file', args),
+  stageAll: (args: { workspacePath: string }) => ipcRenderer.invoke('git:stage-all', args),
+  unstageAll: (args: { workspacePath: string }) => ipcRenderer.invoke('git:unstage-all', args),
   revertFile: (args: { workspacePath: string; filePath: string }) =>
     ipcRenderer.invoke('git:revert-file', args),
+  gitCommit: (args: { workspacePath: string; message: string }) =>
+    ipcRenderer.invoke('git:commit', args),
+  gitPush: (args: { workspacePath: string }) => ipcRenderer.invoke('git:push', args),
+  gitPull: (args: { workspacePath: string }) => ipcRenderer.invoke('git:pull', args),
+  gitSync: (args: { workspacePath: string; commitMessage?: string }) =>
+    ipcRenderer.invoke('git:sync', args),
   gitCommitAndPush: (args: {
     workspacePath: string;
     commitMessage?: string;

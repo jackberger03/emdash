@@ -115,9 +115,35 @@ declare global {
         success: boolean;
         error?: string;
       }>;
+      stageAll: (args: { workspacePath: string }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      unstageAll: (args: { workspacePath: string }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
       revertFile: (args: { workspacePath: string; filePath: string }) => Promise<{
         success: boolean;
         action?: 'unstaged' | 'reverted';
+        error?: string;
+      }>;
+      gitCommit: (args: { workspacePath: string; message: string }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      gitPush: (args: { workspacePath: string }) => Promise<{
+        success: boolean;
+        branch?: string;
+        error?: string;
+      }>;
+      gitPull: (args: { workspacePath: string }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      gitSync: (args: { workspacePath: string; commitMessage?: string }) => Promise<{
+        success: boolean;
+        branch?: string;
         error?: string;
       }>;
       gitCommitAndPush: (args: {
