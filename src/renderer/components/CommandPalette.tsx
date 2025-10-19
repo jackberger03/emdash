@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Command } from 'cmdk';
@@ -69,20 +69,18 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
   const [search, setSearch] = useState('');
   const shouldReduceMotion = useReducedMotion();
 
-  // Reset search when closed
-  useEffect(() => {
-    if (!isOpen) {
-      setSearch('');
-    }
-  }, [isOpen]);
+  const handleClose = useCallback(() => {
+    setSearch(''); // Reset search on close
+    onClose();
+  }, [onClose]);
 
   const runCommand = useCallback(
     (command: () => void) => {
-      onClose();
+      handleClose();
       // Small delay to ensure modal closes before action
       setTimeout(() => command(), 50);
     },
-    [onClose]
+    [handleClose]
   );
 
   // Build command items
@@ -234,7 +232,7 @@ const CommandPalette: React.FC<CommandPaletteProps> = ({
           animate={{ opacity: 1 }}
           exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0 }}
           transition={shouldReduceMotion ? { duration: 0 } : { duration: 0.12, ease: 'easeOut' }}
-          onClick={onClose}
+          onClick={handleClose}
         >
           <motion.div
             onClick={(event) => event.stopPropagation()}
