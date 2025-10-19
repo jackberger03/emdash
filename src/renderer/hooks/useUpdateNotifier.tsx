@@ -48,8 +48,7 @@ export function useUpdateNotifier(opts: Options = {}) {
         try {
           toast({
             title: 'Update available',
-            description:
-              'There is a new update available. Go to Settings to download the new DMG.',
+            description: 'There is a new update available. Go to Settings to download the new DMG.',
             action: (
               <ToastAction altText="Open Settings" onClick={() => onOpenSettings?.()}>
                 Open Settings
@@ -78,4 +77,3 @@ export function useUpdateNotifier(opts: Options = {}) {
 }
 
 export default useUpdateNotifier;
-
