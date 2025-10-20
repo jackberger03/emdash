@@ -69,10 +69,11 @@ export function startPty(options: {
     const port = sshConfig.port || 22;
 
     // Build SSH args: -i keyPath -p port user@host -t "cd remotePath && shell"
-    // When a custom shell command is provided (like 'claude'), wrap it in a login shell
-    // to ensure PATH and environment are loaded correctly
+    // When a custom shell command is provided (like 'claude'), we need to ensure
+    // the remote shell environment is fully loaded so npm global binaries are in PATH.
+    // We do this by starting an interactive login shell and then executing the command.
     const remoteCommand = shell
-      ? `cd ${sshConfig.remotePath} && exec bash -l -c '${shell.replace(/'/g, "'\\''")}'`
+      ? `cd ${sshConfig.remotePath} && $SHELL -i -l -c '${shell.replace(/'/g, "'\\''")}'`
       : `cd ${sshConfig.remotePath} && exec $SHELL`;
 
     args = [

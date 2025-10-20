@@ -587,8 +587,6 @@ const ChatInterface: React.FC<Props> = ({
                   provider: p,
                   isActive,
                   terminalId: `chat-${effectiveWorkspaceId}-${p}`,
-                  sshInfo,
-                  sshConfig: sshInfo?.enabled ? sshInfo : undefined,
                 });
 
                 return (

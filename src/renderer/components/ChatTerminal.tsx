@@ -208,7 +208,7 @@ const ChatTerminalComponent: React.FC<Props> = ({
     const startTsRef = { current: Date.now() } as { current: number };
     (async () => {
       try {
-        console.log('[ChatTerminal] Starting PTY:', { id, cwd, shell, sshConfig });
+        console.log('[ChatTerminal] Starting PTY:', { id, cwd, shell });
 
         const res = await window.electronAPI.ptyStart({
           id,
