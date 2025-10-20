@@ -79,21 +79,17 @@ function buildTmuxIdentifiers(id: string): { session: string; socket: string } {
   return { session, socket };
 }
 
-function ensureSocketDir(): string {
+function ensureSocketDir(): { dir: string; configPath: string } {
   const dir = join(os.tmpdir(), 'emdash-tmux');
   if (!existsSync(dir)) {
     mkdirSync(dir, { recursive: true });
   }
-  return dir;
-}
 
-function ensureLocalTmuxConfig(): string {
-  const configPath = process.env.EMDASH_TMUX_CONFIG || join(os.homedir(), '.emdash-tmux.conf');
-  if (!existsSync(configPath)) {
-    const lines = [`set-option -g status off`, `set-option -g set-titles on`, `set-option -g mouse off`];
-    writeFileSync(configPath, lines.join('\n'), { encoding: 'utf8' });
-  }
-  return configPath;
+  const configPath = join(dir, 'tmux.conf');
+  const lines = [`set-option -g status off`, `set-option -g set-titles on`, `set-option -g mouse off`];
+  writeFileSync(configPath, lines.join('\n'), { encoding: 'utf8' });
+
+  return { dir, configPath };
 }
 
 function parseCommand(input: string): { command: string; args: string[] } {
@@ -158,37 +154,24 @@ export function startPty(options: {
     const { session, socket } = buildTmuxIdentifiers(id);
     const remoteSocketDir = '$HOME/.emdash-tmux';
     const remoteSocketPath = `${remoteSocketDir}/${socket}`;
-    const remoteConfigEnv = process.env.EMDASH_REMOTE_TMUX_CONFIG || '$HOME/.emdash-tmux.conf';
     const initialCols = Math.max(20, cols);
     const initialRows = Math.max(10, rows);
     const remoteShellCommand = (shell || '$SHELL -i -l').trim();
-
-    const escapeSingle = (value: string) => value.replace(/'/g, "'\\''");
-    const remoteDirEscaped = escapeSingle(remotePath);
-    const remoteConfigEscaped = escapeSingle(remoteConfigEnv);
-
-    const remoteCommandTokens = shell
-      ? (() => {
-          const parsedRemote = parseCommand(remoteShellCommand);
-          return [parsedRemote.command, ...parsedRemote.args];
-        })()
-      : ['$SHELL', '-i', '-l'];
-    const remoteCommandJoined = remoteCommandTokens
-      .map((token) => `'${escapeSingle(token)}'`)
-      .join(' ');
+    const remoteShellEscaped = remoteShellCommand.replace(/'/g, "'\\''");
+    const remoteDirEscaped = remotePath.replace(/'/g, "'\\''");
 
     const remoteScriptParts = [
-      `__EMDASH_SOCKET="${remoteSocketPath}"`,
-      `__EMDASH_SESSION="${session}"`,
+      `__EMDASH_SOCKET=\"${remoteSocketPath}\"`,
+      `__EMDASH_SESSION=\"${session}\"`,
       `__EMDASH_DIR='${remoteDirEscaped}'`,
-      `__EMDASH_CONF='${remoteConfigEscaped}'`,
+      `__EMDASH_CONF=\"${remoteSocketDir}/tmux.conf\"`,
       'if command -v tmux >/dev/null 2>&1; then',
       '  mkdir -p "$(dirname \"$__EMDASH_SOCKET\")"',
       '  if [ ! -f "$__EMDASH_CONF" ]; then printf %s\\n "set-option -g status off" "set-option -g set-titles on" "set-option -g mouse off" > "$__EMDASH_CONF"; fi',
-      `  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" -- ${remoteCommandJoined}`,
+      `  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" '${remoteShellEscaped}'`,
       '  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" attach-session -t "$__EMDASH_SESSION"',
       'else',
-      `  cd "$__EMDASH_DIR" && exec ${remoteCommandJoined}`,
+      `  cd "$__EMDASH_DIR" && exec '${remoteShellEscaped}'`,
       'fi',
     ];
     const remoteScript = remoteScriptParts.join(' ; ');
@@ -227,11 +210,10 @@ export function startPty(options: {
     }
 
     const { session, socket } = buildTmuxIdentifiers(id);
-    const socketDir = ensureSocketDir();
+    const { dir: socketDir, configPath } = ensureSocketDir();
     const socketPath = join(socketDir, socket);
     const initialCols = Math.max(20, cols);
     const initialRows = Math.max(10, rows);
-    const configPath = ensureLocalTmuxConfig();
 
     useShell = tmuxInfo.binary;
     args = [
@@ -342,7 +324,7 @@ export function cleanAllTmuxSessions(): {
     };
   }
 
-  const socketDir = ensureSocketDir();
+  const { dir: socketDir } = ensureSocketDir();
 
   try {
     // List all tmux sessions using the emdash socket directory
