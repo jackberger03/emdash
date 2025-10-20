@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ExternalLink, ChevronDown, Terminal } from 'lucide-react';
+import { ExternalLink, ChevronDown, Terminal, PictureInPicture2 } from 'lucide-react';
 import { type Provider } from '../types';
 import { type LinearIssueSummary } from '../types/linear';
 import { type GitHubIssueSummary } from '../types/github';
@@ -478,6 +478,30 @@ export const ProviderBar: React.FC<Props> = ({
                     </span>
                   )}
                 </div>
+              )}
+
+              {/* Floating Window Button */}
+              {workspaceId && (
+                <TooltipProvider delayDuration={250}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-7 items-center gap-1.5 rounded-md border border-border bg-secondary px-2 text-xs text-secondary-foreground transition-colors hover:bg-secondary/80"
+                        onClick={async () => {
+                          await window.electronAPI.floatingSetWorkspace?.(workspaceId);
+                          await window.electronAPI.floatingShow?.();
+                        }}
+                        title="Open in Floating Window"
+                      >
+                        <PictureInPicture2 className="h-3.5 w-3.5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Open in Floating Window</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
 
               {/* Terminal Toggle Button */}
