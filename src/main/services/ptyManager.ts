@@ -69,6 +69,12 @@ export function startPty(options: {
     const port = sshConfig.port || 22;
 
     // Build SSH args: -i keyPath -p port user@host -t "cd remotePath && shell"
+    // When a custom shell command is provided (like 'claude'), wrap it in a login shell
+    // to ensure PATH and environment are loaded correctly
+    const remoteCommand = shell
+      ? `cd ${sshConfig.remotePath} && exec bash -l -c '${shell.replace(/'/g, "'\\''")}'`
+      : `cd ${sshConfig.remotePath} && exec $SHELL`;
+
     args = [
       '-i',
       keyPath,
@@ -80,7 +86,7 @@ export function startPty(options: {
       'ServerAliveInterval=60', // Keep connection alive
       `${sshConfig.user}@${sshConfig.host}`,
       '-t', // Force PTY allocation
-      `cd ${sshConfig.remotePath} && exec ${shell || '$SHELL'}`, // cd to remote path and start shell
+      remoteCommand,
     ];
 
     // For SSH, cwd is local (doesn't matter much, but use home)
