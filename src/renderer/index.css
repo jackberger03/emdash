@@ -166,16 +166,25 @@
 @layer components {
   /* Override Tailwind gray colors for lights-out theme */
   .lights-out .bg-gray-50 {
-    background-color: #fafafa;
+    background-color: #0f0f0f;
   }
   .lights-out .bg-gray-100 {
-    background-color: #f2f2f2;
+    background-color: #141414;
   }
   .lights-out .bg-gray-800 {
     background-color: #0a0a0a;
   }
   .lights-out .bg-gray-900 {
     background-color: #000000;
+  }
+  .lights-out .border-gray-100 {
+    border-color: #1a1a1a;
+  }
+  .lights-out .border-gray-200 {
+    border-color: #262626;
+  }
+  .lights-out .border-gray-300 {
+    border-color: #333333;
   }
   .lights-out .border-gray-700 {
     border-color: #262626;
@@ -189,6 +198,15 @@
   }
   .lights-out .text-gray-600 {
     color: #999999;
+  }
+  .lights-out .hover\:bg-gray-50:hover {
+    background-color: #1a1a1a;
+  }
+  .lights-out .hover\:bg-gray-100:hover {
+    background-color: #1f1f1f;
+  }
+  .lights-out .hover\:bg-gray-200:hover {
+    background-color: #262626;
   }
   .lights-out .hover\:bg-gray-700:hover {
     background-color: #1a1a1a;
@@ -215,6 +233,43 @@
   }
   .lights-out .border-blue-600 {
     border-color: #5585d8;
+  }
+
+  /* Override white background for lights-out mode */
+  .lights-out .bg-white {
+    background-color: #0a0a0a;
+  }
+
+  /* Override diff colors for lights-out mode */
+  .lights-out .bg-emerald-50 {
+    background-color: #0d2818;
+  }
+  .lights-out .bg-rose-50 {
+    background-color: #2d1515;
+  }
+  .lights-out .text-emerald-800 {
+    color: #6ee7b7;
+  }
+  .lights-out .text-emerald-200 {
+    color: #6ee7b7;
+  }
+  .lights-out .text-rose-800 {
+    color: #fca5a5;
+  }
+  .lights-out .text-rose-200 {
+    color: #fca5a5;
+  }
+  .lights-out .text-gray-700 {
+    color: #d1d5db;
+  }
+  .lights-out .text-gray-500 {
+    color: #9ca3af;
+  }
+  .lights-out .text-gray-300 {
+    color: #e5e7eb;
+  }
+  .lights-out .border-gray-800 {
+    border-color: #1a1a1a;
   }
 
   /* Force right-sidebar terminal to light theme: white background and black text */

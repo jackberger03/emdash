@@ -13,18 +13,49 @@ interface ChangesDiffModalProps {
   initialFile?: string;
 }
 
-const Line: React.FC<{ text?: string; type: DiffLine['type'] }> = ({ text = '', type }) => {
-  const cls =
+const Line: React.FC<{ text?: string; type: DiffLine['type']; lineNum?: number }> = ({
+  text = '',
+  type,
+  lineNum,
+}) => {
+  const bgCls =
     type === 'add'
-      ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200'
+      ? 'bg-emerald-50/80 dark:bg-emerald-900/20'
       : type === 'del'
-        ? 'bg-rose-50 dark:bg-rose-900/30 text-rose-800 dark:text-rose-200'
-        : 'bg-transparent text-gray-700 dark:text-gray-300';
+        ? 'bg-rose-50/80 dark:bg-rose-900/20'
+        : 'bg-transparent';
+
+  const textCls =
+    type === 'add'
+      ? 'text-emerald-900 dark:text-emerald-200'
+      : type === 'del'
+        ? 'text-rose-900 dark:text-rose-200'
+        : 'text-gray-800 dark:text-gray-300';
+
+  const borderCls =
+    type === 'add'
+      ? 'border-l-2 border-emerald-500 dark:border-emerald-400'
+      : type === 'del'
+        ? 'border-l-2 border-rose-500 dark:border-rose-400'
+        : 'border-l-2 border-transparent';
+
+  const symbol = type === 'add' ? '+' : type === 'del' ? '-' : ' ';
+
   return (
-    <div
-      className={`whitespace-pre-wrap break-words px-3 py-0.5 font-mono text-[12px] leading-5 ${cls}`}
-    >
-      {text}
+    <div className={`flex items-start ${bgCls} ${borderCls}`}>
+      <div className="flex min-w-0 flex-1">
+        <div className="w-12 flex-shrink-0 select-none px-2 py-1 text-right font-mono text-xs text-gray-500 dark:text-gray-500">
+          {lineNum !== undefined ? lineNum : ''}
+        </div>
+        <div className="w-6 flex-shrink-0 select-none px-1 py-1 text-center font-mono text-xs text-gray-600 dark:text-gray-400">
+          {symbol}
+        </div>
+        <div
+          className={`min-w-0 flex-1 whitespace-pre-wrap break-words px-3 py-1 font-mono text-[13px] leading-6 ${textCls}`}
+        >
+          {text}
+        </div>
+      </div>
     </div>
   );
 };
@@ -42,23 +73,33 @@ export const ChangesDiffModal: React.FC<ChangesDiffModalProps> = ({
 
   const grouped = useMemo(() => {
     // Convert linear diff into rows for side-by-side
-    const rows: Array<{ left?: DiffLine; right?: DiffLine }> = [];
+    const rows: Array<{
+      left?: DiffLine & { lineNum?: number };
+      right?: DiffLine & { lineNum?: number };
+    }> = [];
+    let leftLine = 1;
+    let rightLine = 1;
+
     for (const l of lines) {
       if (l.type === 'context') {
         rows.push({
-          left: { ...l, left: l.left, right: undefined },
-          right: { ...l, right: l.right, left: undefined },
+          left: { ...l, left: l.left, right: undefined, lineNum: leftLine },
+          right: { ...l, right: l.right, left: undefined, lineNum: rightLine },
         });
+        leftLine++;
+        rightLine++;
       } else if (l.type === 'del') {
-        rows.push({ left: l });
+        rows.push({ left: { ...l, lineNum: leftLine } });
+        leftLine++;
       } else if (l.type === 'add') {
         // Try to pair with previous deletion if it exists and right is empty
         const last = rows[rows.length - 1];
         if (last && last.right === undefined && last.left && last.left.type === 'del') {
-          last.right = l;
+          last.right = { ...l, lineNum: rightLine };
         } else {
-          rows.push({ right: l });
+          rows.push({ right: { ...l, lineNum: rightLine } });
         }
+        rightLine++;
       }
     }
     return rows;
@@ -133,22 +174,40 @@ export const ChangesDiffModal: React.FC<ChangesDiffModalProps> = ({
                     Loading diff…
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-px bg-gray-200 dark:bg-gray-800">
+                  <div className="grid grid-cols-2 gap-px bg-gray-300 dark:bg-gray-700">
                     <div className="bg-white dark:bg-gray-900">
+                      <div className="sticky top-0 z-10 flex items-center border-b border-gray-300 bg-gray-100 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-800">
+                        <div className="w-12 text-right font-mono text-xs font-semibold text-gray-600 dark:text-gray-400">
+                          Line
+                        </div>
+                        <div className="ml-6 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                          Before
+                        </div>
+                      </div>
                       {grouped.map((r, idx) => (
                         <Line
                           key={`l-${idx}`}
                           text={r.left?.left ?? r.left?.right}
                           type={r.left?.type || 'context'}
+                          lineNum={r.left?.lineNum}
                         />
                       ))}
                     </div>
                     <div className="bg-white dark:bg-gray-900">
+                      <div className="sticky top-0 z-10 flex items-center border-b border-gray-300 bg-gray-100 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-800">
+                        <div className="w-12 text-right font-mono text-xs font-semibold text-gray-600 dark:text-gray-400">
+                          Line
+                        </div>
+                        <div className="ml-6 text-xs font-semibold text-gray-700 dark:text-gray-300">
+                          After
+                        </div>
+                      </div>
                       {grouped.map((r, idx) => (
                         <Line
                           key={`r-${idx}`}
                           text={r.right?.right ?? r.right?.left}
                           type={r.right?.type || 'context'}
+                          lineNum={r.right?.lineNum}
                         />
                       ))}
                     </div>
