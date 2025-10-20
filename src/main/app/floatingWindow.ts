@@ -83,18 +83,37 @@ export function getFloatingWorkspace(): string | null {
   return currentWorkspaceId;
 }
 
-export function registerFloatingHotkey(): void {
-  // Register Command+Shift+Space (Mac) or Ctrl+Shift+Space (Windows/Linux)
-  const hotkey = process.platform === 'darwin' ? 'Command+Shift+Space' : 'Ctrl+Shift+Space';
+let currentHotkey: string | null = null;
+
+export function registerFloatingHotkey(customHotkey?: string): void {
+  // Unregister previous hotkey if any
+  if (currentHotkey) {
+    globalShortcut.unregister(currentHotkey);
+    currentHotkey = null;
+  }
+
+  // Use custom hotkey or default
+  const hotkey = customHotkey || 'CommandOrControl+Shift+Space';
 
   const success = globalShortcut.register(hotkey, () => {
     toggleFloatingWindow();
   });
 
   if (success) {
+    currentHotkey = hotkey;
     console.log(`Floating window hotkey registered: ${hotkey}`);
   } else {
-    console.error('Failed to register floating window hotkey');
+    console.error('Failed to register floating window hotkey:', hotkey);
+  }
+}
+
+export function updateFloatingHotkey(newHotkey: string): boolean {
+  try {
+    registerFloatingHotkey(newHotkey);
+    return true;
+  } catch (error) {
+    console.error('Failed to update floating hotkey:', error);
+    return false;
   }
 }
 

@@ -167,6 +167,7 @@ declare global {
         error?: string;
       }>;
       floatingShow?: () => Promise<{ success: boolean; error?: string }>;
+      floatingUpdateHotkey?: (hotkey: string) => Promise<{ success: boolean; error?: string }>;
       onFloatingWorkspaceChanged?: (listener: (workspaceId: string) => void) => () => void;
       // Database methods
       getProjects: () => Promise<any[]>;

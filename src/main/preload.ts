@@ -402,6 +402,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('floating:setWorkspace', workspaceId),
   floatingGetWorkspace: () => ipcRenderer.invoke('floating:getWorkspace'),
   floatingShow: () => ipcRenderer.invoke('floating:show'),
+  floatingUpdateHotkey: (hotkey: string) => ipcRenderer.invoke('floating:updateHotkey', hotkey),
   onFloatingWorkspaceChanged: (listener: (workspaceId: string) => void) => {
     const wrapped = (_: Electron.IpcRendererEvent, workspaceId: string) => listener(workspaceId);
     ipcRenderer.on('floating:workspace-changed', wrapped);
@@ -703,6 +704,7 @@ export interface ElectronAPI {
     error?: string;
   }>;
   floatingShow: () => Promise<{ success: boolean; error?: string }>;
+  floatingUpdateHotkey: (hotkey: string) => Promise<{ success: boolean; error?: string }>;
   onFloatingWorkspaceChanged: (listener: (workspaceId: string) => void) => () => void;
 }
 

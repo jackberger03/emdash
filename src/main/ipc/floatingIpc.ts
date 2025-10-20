@@ -4,6 +4,7 @@ import {
   setFloatingWorkspace,
   getFloatingWorkspace,
   createFloatingWindow,
+  updateFloatingHotkey,
 } from '../app/floatingWindow';
 import { log } from '../lib/logger';
 
@@ -60,6 +61,20 @@ export function registerFloatingIpc() {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Failed to show floating window',
+      };
+    }
+  });
+
+  // Update hotkey
+  ipcMain.handle('floating:updateHotkey', async (_, hotkey: string) => {
+    try {
+      const success = updateFloatingHotkey(hotkey);
+      return { success };
+    } catch (error) {
+      log.error('Failed to update floating hotkey:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Failed to update floating hotkey',
       };
     }
   });
