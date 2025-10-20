@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Keyboard } from 'lucide-react';
 
+// Detect platform - use userAgent as fallback since process.platform isn't available in renderer
+const isMac = navigator.userAgent.includes('Mac');
+
 export const HotkeyCard: React.FC = () => {
   const [hotkey, setHotkey] = useState<string>('CommandOrControl+Shift+Space');
   const [isRecording, setIsRecording] = useState(false);
@@ -17,20 +20,21 @@ export const HotkeyCard: React.FC = () => {
 
   const formatHotkey = (hotkeyString: string): string => {
     return hotkeyString
-      .replace('CommandOrControl', process.platform === 'darwin' ? '⌘' : 'Ctrl')
+      .replace('CommandOrControl', isMac ? '⌘' : 'Ctrl')
       .replace('Command', '⌘')
       .replace('Control', 'Ctrl')
       .replace('Shift', '⇧')
       .replace('Alt', '⌥')
       .replace('Option', '⌥')
-      .replace('+', ' + ');
+      .split('+')
+      .join(' + ');
   };
 
   const electronKeyName = (key: string): string => {
     const keyMap: Record<string, string> = {
       ' ': 'Space',
       Control: 'Control',
-      Meta: process.platform === 'darwin' ? 'Command' : 'Super',
+      Meta: isMac ? 'Command' : 'Super',
       Shift: 'Shift',
       Alt: 'Alt',
     };
@@ -48,7 +52,7 @@ export const HotkeyCard: React.FC = () => {
 
       // Add modifier keys
       if (e.ctrlKey || e.metaKey) {
-        if (process.platform === 'darwin' && e.metaKey) {
+        if (isMac && e.metaKey) {
           keys.add('Command');
         } else if (e.ctrlKey) {
           keys.add('Control');
