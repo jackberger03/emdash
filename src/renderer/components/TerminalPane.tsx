@@ -16,6 +16,13 @@ type Props = {
   onActivity?: () => void;
   onStartError?: (message: string) => void;
   onStartSuccess?: () => void;
+  sshConfig?: {
+    host: string;
+    user: string;
+    remotePath: string;
+    port?: number;
+    keyPath?: string;
+  };
 };
 
 const TerminalPaneComponent: React.FC<Props> = ({
@@ -32,6 +39,7 @@ const TerminalPaneComponent: React.FC<Props> = ({
   onActivity,
   onStartError,
   onStartSuccess,
+  sshConfig,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
@@ -246,6 +254,7 @@ const TerminalPaneComponent: React.FC<Props> = ({
           cols,
           rows,
           shell,
+          sshConfig,
         });
         console.log('[TerminalPane] PTY start result:', {
           id,

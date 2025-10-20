@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from './components/ui/button';
 
-import { FolderOpen } from 'lucide-react';
+import { FolderOpen, Server } from 'lucide-react';
 import LeftSidebar from './components/LeftSidebar';
 import ProjectMainView from './components/ProjectMainView';
 import WorkspaceModal from './components/WorkspaceModal';
+import SSHConfigModal from './components/SSHConfigModal';
 import SplitChatPane from './components/SplitChatPane';
 import { Toaster } from './components/ui/toaster';
 import useUpdateNotifier from './hooks/useUpdateNotifier';
@@ -166,6 +167,14 @@ interface Project {
     repository: string;
     connected: boolean;
   };
+  sshInfo?: {
+    enabled: boolean;
+    host: string;
+    user: string;
+    remotePath: string;
+    port?: number;
+    keyPath?: string;
+  };
   workspaces?: Workspace[];
 }
 
@@ -210,6 +219,8 @@ const AppContent: React.FC = () => {
   const [showHomeView, setShowHomeView] = useState<boolean>(true);
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState<boolean>(false);
   const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
+  const [showSSHSetupModal, setShowSSHSetupModal] = useState(false);
+  const [projectForSSHSetup, setProjectForSSHSetup] = useState<Project | null>(null);
   const [activeWorkspaceProvider, setActiveWorkspaceProvider] = useState<Provider | null>(null);
   const [isCodexInstalled, setIsCodexInstalled] = useState<boolean | null>(null);
   const [isClaudeInstalled, setIsClaudeInstalled] = useState<boolean | null>(null);
@@ -475,6 +486,59 @@ const AppContent: React.FC = () => {
   }, []);
 
   // handleGitHubAuth, handleLogout come from hook; toasts handled by callers as needed
+
+  const handleSSHProjectConnect = async (config: {
+    enabled: boolean;
+    host: string;
+    user: string;
+    remotePath: string;
+    port?: number;
+    keyPath?: string;
+  }) => {
+    try {
+      // Extract folder name from remote path
+      const folderName = config.remotePath.split('/').filter(Boolean).pop() || config.host;
+
+      const newProject: Project = {
+        id: Date.now().toString(),
+        name: folderName,
+        path: config.remotePath, // Use remote path as the path
+        gitInfo: {
+          isGitRepo: false, // We'll detect this later via SSH
+        },
+        sshInfo: config,
+        workspaces: [],
+      };
+
+      // Save to database
+      const saveResult = await window.electronAPI.saveProject(newProject);
+      if (saveResult.success) {
+        setProjects((prev) => [...prev, newProject]);
+        setSelectedProject(newProject);
+        setShowSSHSetupModal(false);
+        toast({
+          title: 'SSH Project Connected',
+          description: `Connected to ${config.user}@${config.host}`,
+        });
+      } else {
+        const { log } = await import('./lib/logger');
+        log.error('Failed to save SSH project:', saveResult.error);
+        toast({
+          title: 'Failed to Save Project',
+          description: saveResult.error,
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      const { log } = await import('./lib/logger');
+      log.error('SSH project connection error:', error as any);
+      toast({
+        title: 'Failed to Connect SSH Project',
+        description: 'Please check the console for details.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleOpenProject = async () => {
     try {
@@ -1277,7 +1341,16 @@ const AppContent: React.FC = () => {
             <div className="flex flex-col justify-center gap-4 sm:flex-row">
               <Button onClick={handleOpenProject} size="lg" className="min-w-[200px]">
                 <FolderOpen className="mr-2 h-5 w-5" />
-                Open Project
+                Open Local Project
+              </Button>
+              <Button
+                onClick={() => setShowSSHSetupModal(true)}
+                size="lg"
+                className="min-w-[200px]"
+                variant="outline"
+              >
+                <Server className="mr-2 h-5 w-5" />
+                Connect SSH Project
               </Button>
             </div>
 
@@ -1466,6 +1539,11 @@ const AppContent: React.FC = () => {
             projectPath={selectedProject?.path}
             defaultBranch={selectedProject?.gitInfo.branch || 'main'}
             existingNames={(selectedProject?.workspaces || []).map((w) => w.name)}
+          />
+          <SSHConfigModal
+            isOpen={showSSHSetupModal}
+            onClose={() => setShowSSHSetupModal(false)}
+            onSave={handleSSHProjectConnect}
           />
           <Toaster />
         </RightSidebarProvider>

@@ -1,5 +1,5 @@
 import { ipcMain, WebContents } from 'electron';
-import { startPty, writePty, resizePty, killPty, getPty } from './ptyManager';
+import { startPty, writePty, resizePty, killPty, getPty, SSHConfig } from './ptyManager';
 import { log } from '../lib/logger';
 
 const owners = new Map<string, WebContents>();
@@ -33,14 +33,15 @@ export function registerPtyIpc(): void {
         env?: Record<string, string>;
         cols?: number;
         rows?: number;
+        sshConfig?: SSHConfig;
       }
     ) => {
       try {
-        const { id, cwd, shell, env, cols, rows } = args;
+        const { id, cwd, shell, env, cols, rows, sshConfig } = args;
         // Reuse existing PTY if present; otherwise create new
         const existing = getPty(id);
-        const proc = existing ?? startPty({ id, cwd, shell, env, cols, rows });
-        log.debug('pty:start OK', { id, cwd, shell, cols, rows, reused: !!existing });
+        const proc = existing ?? startPty({ id, cwd, shell, env, cols, rows, sshConfig });
+        log.debug('pty:start OK', { id, cwd, shell, cols, rows, isSSH: !!sshConfig, reused: !!existing });
         const wc = event.sender;
         owners.set(id, wc);
 

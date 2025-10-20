@@ -221,6 +221,9 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
   const [detailModalType, setDetailModalType] = useState<'issue' | 'pr'>('issue');
   const [detailModalNumber, setDetailModalNumber] = useState<number>(0);
 
+  // SSH modal state
+  const [showSSHModal, setShowSSHModal] = useState(false);
+
   // Load GitHub issues
   const loadIssues = async () => {
     if (!canLoadGitHub) return;
@@ -275,6 +278,23 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
       setCheckoutPrNumber(null);
       setSelectedPr(null);
     }
+  };
+
+  const handleSSHSave = async (config: {
+    enabled: boolean;
+    host: string;
+    user: string;
+    remotePath: string;
+    port?: number;
+    keyPath?: string;
+  }) => {
+    // Update project with SSH configuration
+    const api = (window as any).electronAPI;
+    const updatedProject = {
+      ...project,
+      sshInfo: config,
+    };
+    await api.saveProject(updatedProject);
   };
 
   return (
@@ -335,6 +355,21 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                         </Badge>
                       </BreadcrumbItem>
                     )}
+                    <BreadcrumbItem>
+                      <button
+                        onClick={() => setShowSSHModal(true)}
+                        className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-medium transition-all hover:bg-muted/80"
+                      >
+                        <Server className="size-3" />
+                        {project.sshInfo?.enabled ? (
+                          <span className="text-green-600 dark:text-green-400">
+                            SSH: {project.sshInfo.user}@{project.sshInfo.host}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">Configure SSH</span>
+                        )}
+                      </button>
+                    </BreadcrumbItem>
                   </BreadcrumbList>
                 </Breadcrumb>
               </div>
@@ -662,6 +697,13 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                 refreshPrs();
               }
             }}
+          />
+
+          <SSHConfigModal
+            isOpen={showSSHModal}
+            onClose={() => setShowSSHModal(false)}
+            onSave={handleSSHSave}
+            initialConfig={project.sshInfo}
           />
         </div>
       </div>

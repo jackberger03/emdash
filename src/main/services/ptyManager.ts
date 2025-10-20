@@ -1,10 +1,21 @@
 import os from 'os';
 import * as pty from 'node-pty';
 import type { IPty } from 'node-pty';
+import { existsSync } from 'fs';
+import { join, dirname } from 'path';
+
+export interface SSHConfig {
+  host: string;
+  user: string;
+  remotePath: string;
+  port?: number;
+  keyPath?: string;
+}
 
 type PtyRecord = {
   id: string;
   proc: IPty;
+  isSSH?: boolean;
 };
 
 const ptys = new Map<string, PtyRecord>();
@@ -17,6 +28,20 @@ function getDefaultShell(): string {
   return process.env.SHELL || '/bin/bash';
 }
 
+function getDefaultSSHKeyPath(): string {
+  const sshDir = join(os.homedir(), '.ssh');
+  const commonKeys = ['id_ed25519', 'id_ecdsa', 'id_rsa', 'id_dsa'];
+
+  for (const keyName of commonKeys) {
+    const keyPath = join(sshDir, keyName);
+    if (existsSync(keyPath)) {
+      return keyPath;
+    }
+  }
+
+  return join(sshDir, 'id_ed25519');
+}
+
 export function startPty(options: {
   id: string;
   cwd?: string;
@@ -24,22 +49,52 @@ export function startPty(options: {
   env?: NodeJS.ProcessEnv;
   cols?: number;
   rows?: number;
+  sshConfig?: SSHConfig;
 }): IPty {
-  const { id, cwd, shell, env, cols = 80, rows = 24 } = options;
+  const { id, cwd, shell, env, cols = 80, rows = 24, sshConfig } = options;
 
-  const shellInput = shell || getDefaultShell();
-  const useCwd = cwd || process.cwd() || os.homedir();
   const useEnv = { TERM: 'xterm-256color', ...process.env, ...(env || {}) };
 
-  // Parse shell command and arguments
-  // Split on spaces but respect quoted strings
-  let useShell = shellInput;
+  let useShell: string;
   let args: string[] = [];
+  let useCwd: string;
+  let isSSH = false;
 
-  if (shellInput.includes(' ')) {
-    const parts = shellInput.match(/(?:[^\s"]+|"[^"]*")+/g) || [shellInput];
-    useShell = parts[0];
-    args = parts.slice(1).map((arg) => arg.replace(/^"(.*)"$/, '$1'));
+  if (sshConfig) {
+    // SSH mode: spawn SSH connection instead of local shell
+    isSSH = true;
+    useShell = 'ssh';
+
+    const keyPath = sshConfig.keyPath || getDefaultSSHKeyPath();
+    const port = sshConfig.port || 22;
+
+    // Build SSH args: -i keyPath -p port user@host -t "cd remotePath && shell"
+    args = [
+      '-i', keyPath,
+      '-p', String(port),
+      '-o', 'StrictHostKeyChecking=no',  // Auto-accept host keys
+      '-o', 'ServerAliveInterval=60',    // Keep connection alive
+      `${sshConfig.user}@${sshConfig.host}`,
+      '-t',  // Force PTY allocation
+      `cd ${sshConfig.remotePath} && exec ${shell || '$SHELL'}`  // cd to remote path and start shell
+    ];
+
+    // For SSH, cwd is local (doesn't matter much, but use home)
+    useCwd = os.homedir();
+  } else {
+    // Local mode: spawn local shell
+    const shellInput = shell || getDefaultShell();
+    useCwd = cwd || process.cwd() || os.homedir();
+
+    // Parse shell command and arguments
+    // Split on spaces but respect quoted strings
+    if (shellInput.includes(' ')) {
+      const parts = shellInput.match(/(?:[^\s"]+|"[^"]*")+/g) || [shellInput];
+      useShell = parts[0];
+      args = parts.slice(1).map((arg) => arg.replace(/^"(.*)"$/, '$1'));
+    } else {
+      useShell = shellInput;
+    }
   }
 
   const proc = pty.spawn(useShell, args, {
@@ -50,7 +105,7 @@ export function startPty(options: {
     env: useEnv,
   });
 
-  const rec: PtyRecord = { id, proc };
+  const rec: PtyRecord = { id, proc, isSSH };
   ptys.set(id, rec);
   return proc;
 }

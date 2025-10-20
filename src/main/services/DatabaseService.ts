@@ -128,10 +128,48 @@ export class DatabaseService {
         git_branch TEXT,
         github_repository TEXT,
         github_connected BOOLEAN DEFAULT 0,
+        ssh_enabled BOOLEAN DEFAULT 0,
+        ssh_host TEXT,
+        ssh_user TEXT,
+        ssh_remote_path TEXT,
+        ssh_port INTEGER,
+        ssh_key_path TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    // Add SSH columns to existing projects table (migration)
+    try {
+      await runAsync(`ALTER TABLE projects ADD COLUMN ssh_enabled BOOLEAN DEFAULT 0`);
+    } catch (e) {
+      // Column already exists, ignore
+    }
+    try {
+      await runAsync(`ALTER TABLE projects ADD COLUMN ssh_host TEXT`);
+    } catch (e) {
+      // Column already exists, ignore
+    }
+    try {
+      await runAsync(`ALTER TABLE projects ADD COLUMN ssh_user TEXT`);
+    } catch (e) {
+      // Column already exists, ignore
+    }
+    try {
+      await runAsync(`ALTER TABLE projects ADD COLUMN ssh_remote_path TEXT`);
+    } catch (e) {
+      // Column already exists, ignore
+    }
+    try {
+      await runAsync(`ALTER TABLE projects ADD COLUMN ssh_port INTEGER`);
+    } catch (e) {
+      // Column already exists, ignore
+    }
+    try {
+      await runAsync(`ALTER TABLE projects ADD COLUMN ssh_key_path TEXT`);
+    } catch (e) {
+      // Column already exists, ignore
+    }
 
     // Create workspaces table
     await runAsync(`
@@ -211,14 +249,20 @@ export class DatabaseService {
     // - created_at remains intact on updates; updated_at is bumped.
     return new Promise((resolve, reject) => {
       this.db!.run(
-        `INSERT INTO projects (id, name, path, git_remote, git_branch, github_repository, github_connected, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        `INSERT INTO projects (id, name, path, git_remote, git_branch, github_repository, github_connected, ssh_enabled, ssh_host, ssh_user, ssh_remote_path, ssh_port, ssh_key_path, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
          ON CONFLICT(path) DO UPDATE SET
            name = excluded.name,
            git_remote = excluded.git_remote,
            git_branch = excluded.git_branch,
            github_repository = excluded.github_repository,
            github_connected = excluded.github_connected,
+           ssh_enabled = excluded.ssh_enabled,
+           ssh_host = excluded.ssh_host,
+           ssh_user = excluded.ssh_user,
+           ssh_remote_path = excluded.ssh_remote_path,
+           ssh_port = excluded.ssh_port,
+           ssh_key_path = excluded.ssh_key_path,
            updated_at = CURRENT_TIMESTAMP
         `,
         [
@@ -229,6 +273,12 @@ export class DatabaseService {
           project.gitInfo.branch || null,
           project.githubInfo?.repository || null,
           project.githubInfo?.connected ? 1 : 0,
+          project.sshInfo?.enabled ? 1 : 0,
+          project.sshInfo?.host || null,
+          project.sshInfo?.user || null,
+          project.sshInfo?.remotePath || null,
+          project.sshInfo?.port || null,
+          project.sshInfo?.keyPath || null,
         ],
         (err) => {
           if (err) {
@@ -247,10 +297,11 @@ export class DatabaseService {
     return new Promise((resolve, reject) => {
       this.db!.all(
         `
-        SELECT 
+        SELECT
           id, name, path, git_remote, git_branch, github_repository, github_connected,
+          ssh_enabled, ssh_host, ssh_user, ssh_remote_path, ssh_port, ssh_key_path,
           created_at, updated_at
-        FROM projects 
+        FROM projects
         ORDER BY updated_at DESC
       `,
         (err, rows: any[]) => {
@@ -272,6 +323,17 @@ export class DatabaseService {
                     connected: !!row.github_connected,
                   }
                 : undefined,
+              sshInfo:
+                row.ssh_enabled && row.ssh_host && row.ssh_user && row.ssh_remote_path
+                  ? {
+                      enabled: !!row.ssh_enabled,
+                      host: row.ssh_host,
+                      user: row.ssh_user,
+                      remotePath: row.ssh_remote_path,
+                      port: row.ssh_port || undefined,
+                      keyPath: row.ssh_key_path || undefined,
+                    }
+                  : undefined,
               createdAt: row.created_at,
               updatedAt: row.updated_at,
             }));
