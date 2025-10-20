@@ -17,6 +17,7 @@ import { registerTelemetryIpc } from './telemetryIpc';
 import { registerNotificationIpc } from './notificationIpc';
 import { registerSSHIpc } from './sshIpc';
 import { registerFloatingIpc } from './floatingIpc';
+import { registerOpenRouterIpc } from './openRouterIpc';
 
 export function registerAllIpc() {
   // Core app/utility IPC
@@ -33,6 +34,7 @@ export function registerAllIpc() {
   registerDatabaseIpc();
   registerGitIpc();
   registerSSHIpc();
+  registerOpenRouterIpc();
 
   // Existing modules
   registerPtyIpc();

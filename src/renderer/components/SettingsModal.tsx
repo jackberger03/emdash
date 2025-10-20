@@ -10,6 +10,7 @@ import CliProvidersList, { BASE_CLI_PROVIDERS } from './CliProvidersList';
 import TelemetryCard from './TelemetryCard';
 import ThemeCard from './ThemeCard';
 import HotkeyCard from './HotkeyCard';
+import OpenRouterCard from './OpenRouterCard';
 import { CliProviderStatus } from '../types/connections';
 import { Separator } from './ui/separator';
 
@@ -119,6 +120,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
         description: '',
         sections: [
           { title: 'Integrations', render: () => <IntegrationsCard /> },
+          { title: 'OpenRouter', render: () => <OpenRouterCard /> },
           {
             title: 'CLI providers',
             action: (

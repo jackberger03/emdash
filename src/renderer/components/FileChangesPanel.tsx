@@ -19,6 +19,7 @@ import {
   Download,
   ArrowUpDown,
   GitBranch,
+  Sparkles,
 } from 'lucide-react';
 
 interface FileChangesPanelProps {
@@ -45,6 +46,7 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
   const [isStaging, setIsStaging] = useState(false);
   const [isUnstaging, setIsUnstaging] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isGeneratingMessage, setIsGeneratingMessage] = useState(false);
   const { isCreating: isCreatingPR, createPR } = useCreatePR();
 
   // Extract PR base branch from metadata for PR workspaces
@@ -287,6 +289,56 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
       // Silent fail
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleGenerateCommitMessage = async () => {
+    if (!hasStagedChanges) {
+      toast({
+        title: 'No Staged Changes',
+        description: 'Please stage some files before generating a commit message.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsGeneratingMessage(true);
+    try {
+      const result = await window.electronAPI.openRouterGenerateCommitMessage({
+        workspacePath: workspaceId,
+      });
+
+      if (result.success && result.message) {
+        setCommitMessage(result.message);
+        toast({
+          title: 'Commit Message Generated',
+          description: 'AI-generated commit message has been inserted.',
+        });
+      } else {
+        // Check if API key is not configured
+        if (result.error?.includes('API key not configured')) {
+          toast({
+            title: 'OpenRouter API Key Required',
+            description:
+              'Please configure your OpenRouter API key in the app settings to use this feature.',
+            variant: 'destructive',
+          });
+        } else {
+          toast({
+            title: 'Generation Failed',
+            description: result.error || 'Failed to generate commit message.',
+            variant: 'destructive',
+          });
+        }
+      }
+    } catch (_error) {
+      toast({
+        title: 'Generation Failed',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingMessage(false);
     }
   };
 
@@ -696,18 +748,34 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
         <div className="border-b border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
           {hasStagedChanges ? (
             <>
-              <Input
-                placeholder="Commit message..."
-                value={commitMessage}
-                onChange={(e) => setCommitMessage(e.target.value)}
-                className="mb-2 h-8 text-sm"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && e.ctrlKey) {
-                    e.preventDefault();
-                    handleCommit();
-                  }
-                }}
-              />
+              <div className="mb-2 flex items-center gap-2">
+                <Input
+                  placeholder="Commit message..."
+                  value={commitMessage}
+                  onChange={(e) => setCommitMessage(e.target.value)}
+                  className="h-8 flex-1 text-sm"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.ctrlKey) {
+                      e.preventDefault();
+                      handleCommit();
+                    }
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2 text-xs"
+                  onClick={handleGenerateCommitMessage}
+                  disabled={isGeneratingMessage || !hasStagedChanges}
+                  title="Generate commit message with AI"
+                >
+                  {isGeneratingMessage ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+              </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"

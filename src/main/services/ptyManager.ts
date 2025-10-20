@@ -1,8 +1,9 @@
 import os from 'os';
 import * as pty from 'node-pty';
 import type { IPty } from 'node-pty';
-import { existsSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 import { join, dirname } from 'path';
+import { spawnSync } from 'child_process';
 
 export interface SSHConfig {
   host: string;
@@ -16,9 +17,70 @@ type PtyRecord = {
   id: string;
   proc: IPty;
   isSSH?: boolean;
+  isTmux?: boolean;
+  tmuxSession?: string;
+  tmuxSocketPath?: string;
+  tmuxBinary?: string;
 };
 
 const ptys = new Map<string, PtyRecord>();
+
+type TmuxDetection = {
+  available: boolean;
+  binary?: string;
+  version?: string;
+  error?: string;
+};
+
+let cachedTmuxDetection: TmuxDetection | null = null;
+
+function detectTmux(): TmuxDetection {
+  if (cachedTmuxDetection) {
+    return cachedTmuxDetection;
+  }
+
+  const preferred = process.env.EMDASH_TMUX_PATH || process.env.TMUX || undefined;
+  const candidates = [preferred, '/opt/homebrew/bin/tmux', '/usr/local/bin/tmux', 'tmux'].filter(
+    (v): v is string => !!v
+  );
+
+  for (const bin of candidates) {
+    try {
+      const res = spawnSync(bin, ['-V'], { encoding: 'utf8' });
+      if (res.status === 0) {
+        cachedTmuxDetection = {
+          available: true,
+          binary: bin,
+          version: res.stdout.trim() || res.stderr.trim() || undefined,
+        };
+        return cachedTmuxDetection;
+      }
+    } catch (err: any) {
+      cachedTmuxDetection = {
+        available: false,
+        binary: bin,
+        error: err?.message || String(err),
+      };
+    }
+  }
+
+  cachedTmuxDetection = { available: false };
+  return cachedTmuxDetection;
+}
+
+function sanitizeSessionName(id: string): string {
+  const base = id.replace(/[^a-zA-Z0-9_-]/g, '_');
+  const trimmed = base.slice(-48);
+  return trimmed || 'emdash';
+}
+
+function ensureSocketDir(): string {
+  const dir = join(os.tmpdir(), 'emdash-tmux');
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
 
 function getDefaultShell(): string {
   if (process.platform === 'win32') {

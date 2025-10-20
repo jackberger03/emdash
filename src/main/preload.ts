@@ -146,6 +146,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBranchStatus: (args: { workspacePath: string }) =>
     ipcRenderer.invoke('git:get-branch-status', args),
   openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+
+  // OpenRouter integration
+  openRouterGenerateCommitMessage: (args: { workspacePath: string; model?: string }) =>
+    ipcRenderer.invoke('openrouter:generate-commit-message', args),
+  openRouterSetApiKey: (apiKey: string) => ipcRenderer.invoke('openrouter:set-api-key', apiKey),
+  openRouterHasApiKey: () => ipcRenderer.invoke('openrouter:has-api-key'),
+  openRouterGetApiKey: () => ipcRenderer.invoke('openrouter:get-api-key'),
   // Notifications
   showNotification: (args: { title: string; body: string }) =>
     ipcRenderer.invoke('notification:show', args),
@@ -706,6 +713,15 @@ export interface ElectronAPI {
   floatingShow: () => Promise<{ success: boolean; error?: string }>;
   floatingUpdateHotkey: (hotkey: string) => Promise<{ success: boolean; error?: string }>;
   onFloatingWorkspaceChanged: (listener: (workspaceId: string) => void) => () => void;
+
+  // OpenRouter integration
+  openRouterGenerateCommitMessage: (args: {
+    workspacePath: string;
+    model?: string;
+  }) => Promise<{ success: boolean; message?: string; error?: string }>;
+  openRouterSetApiKey: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
+  openRouterHasApiKey: () => Promise<{ success: boolean; hasKey: boolean; error?: string }>;
+  openRouterGetApiKey: () => Promise<{ success: boolean; apiKey?: string | null; error?: string }>;
 }
 
 declare global {
