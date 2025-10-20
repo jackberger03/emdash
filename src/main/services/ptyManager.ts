@@ -121,6 +121,10 @@ export function startPty(options: {
   let args: string[] = [];
   let useCwd: string;
   let isSSH = false;
+  let isTmux = false;
+  let tmuxSession: string | undefined;
+  let tmuxSocketPath: string | undefined;
+  let tmuxBinary: string | undefined;
 
   if (sshConfig) {
     // SSH mode: spawn SSH connection instead of local shell
