@@ -29,12 +29,22 @@ declare const window: Window & {
   };
 };
 
+interface SSHInfo {
+  enabled: boolean;
+  host: string;
+  user: string;
+  remotePath: string;
+  port?: number;
+  keyPath?: string;
+}
+
 interface Props {
   workspace: Workspace;
   projectName: string;
   className?: string;
   initialProvider?: Provider;
   paneId?: string; // Optional pane ID for split pane isolation
+  sshInfo?: SSHInfo;
 }
 
 // Helper to build shell command with flags based on provider config

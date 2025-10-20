@@ -30,11 +30,21 @@ interface Workspace {
   metadata?: any;
 }
 
+interface SSHInfo {
+  enabled: boolean;
+  host: string;
+  user: string;
+  remotePath: string;
+  port?: number;
+  keyPath?: string;
+}
+
 interface SplitChatPaneProps {
   workspace: Workspace;
   projectName: string;
   className?: string;
   initialProvider?: Provider;
+  sshInfo?: SSHInfo;
 }
 
 // Wrapper component that passes paneId for state isolation
@@ -44,8 +54,9 @@ const PaneWrapper: React.FC<{
   projectName: string;
   provider?: Provider;
   className?: string;
+  sshInfo?: SSHInfo;
 }> = React.memo(
-  ({ workspace, paneId, projectName, provider, className }) => {
+  ({ workspace, paneId, projectName, provider, className, sshInfo }) => {
     return (
       <ChatInterface
         workspace={workspace}
@@ -53,6 +64,7 @@ const PaneWrapper: React.FC<{
         className={className}
         initialProvider={provider}
         paneId={paneId}
+        sshInfo={sshInfo}
       />
     );
   },
@@ -63,7 +75,8 @@ const PaneWrapper: React.FC<{
       prevProps.workspace.id === nextProps.workspace.id &&
       prevProps.projectName === nextProps.projectName &&
       prevProps.provider === nextProps.provider &&
-      prevProps.className === nextProps.className
+      prevProps.className === nextProps.className &&
+      JSON.stringify(prevProps.sshInfo) === JSON.stringify(nextProps.sshInfo)
     );
   }
 );
@@ -73,6 +86,7 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
   projectName,
   className,
   initialProvider,
+  sshInfo,
 }) => {
   const [layout, setLayout] = useState<PaneNode>({
     type: 'chat',
@@ -367,6 +381,7 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
             projectName={projectName}
             provider={node.provider}
             className="h-full"
+            sshInfo={sshInfo}
           />
         </div>
       );
