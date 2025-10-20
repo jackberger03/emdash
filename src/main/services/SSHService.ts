@@ -172,8 +172,8 @@ export class SSHService {
     config: SSHConfig,
     path: string = '~'
   ): Promise<{ success: boolean; directories?: string[]; currentPath?: string; error?: string }> {
-    // Get the absolute path and list directories
-    const command = `cd ${path} && pwd && find . -maxdepth 1 -type d ! -name '.' | sed 's|^./||' | sort`;
+    // Get the absolute path and list directories (including hidden ones)
+    const command = `cd ${path} && pwd && ls -1ap | grep '/$' | sed 's|/$||' | grep -v '^\\.$' | sort`;
 
     const result = await this.executeCommand('temp', { ...config, remotePath: path }, command);
 
@@ -181,13 +181,13 @@ export class SSHService {
       return { success: false, error: result.error };
     }
 
-    const lines = result.stdout?.split('\n').filter(l => l.trim()) || [];
+    const lines = result.stdout?.split('\n').filter((l) => l.trim()) || [];
     if (lines.length === 0) {
       return { success: false, error: 'No output from remote command' };
     }
 
     const currentPath = lines[0]; // First line is pwd output
-    const directories = lines.slice(1); // Rest are directory names
+    const directories = lines.slice(1).filter((d) => d && d !== '.' && d !== '..'); // Rest are directory names
 
     return { success: true, currentPath, directories };
   }
