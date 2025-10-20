@@ -102,4 +102,32 @@ export function registerSSHIpc() {
       }
     }
   );
+
+  // List remote directories
+  ipcMain.handle(
+    'ssh:listDirectories',
+    async (
+      _,
+      args: {
+        config: {
+          host: string;
+          user: string;
+          remotePath: string;
+          port?: number;
+          keyPath?: string;
+        };
+        path?: string;
+      }
+    ) => {
+      try {
+        return await sshService.listRemoteDirectories(args.config, args.path);
+      } catch (error) {
+        log.error('SSH list directories failed:', error);
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to list remote directories',
+        };
+      }
+    }
+  );
 }
