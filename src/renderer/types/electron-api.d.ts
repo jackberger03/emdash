@@ -196,6 +196,11 @@ declare global {
         error?: string;
       }>;
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
+      // Notifications
+      showNotification: (args: {
+        title: string;
+        body: string;
+      }) => Promise<{ success: boolean; error?: string }>;
       connectToGitHub: (projectPath: string) => Promise<{
         success: boolean;
         repository?: string;
@@ -634,6 +639,12 @@ export interface ElectronAPI {
     };
     error?: string;
   }>;
+
+  // Notifications
+  showNotification: (args: {
+    title: string;
+    body: string;
+  }) => Promise<{ success: boolean; error?: string }>;
 
   // Filesystem
   fsList: (

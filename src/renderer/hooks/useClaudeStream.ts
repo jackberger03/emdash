@@ -243,22 +243,15 @@ const useClaudeStream = (options?: Options | null): Result => {
         });
       } catch {}
 
-      // Show notification
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        const hasFocus = document.hasFocus();
-        console.log(
-          'Claude complete - hasFocus:',
-          hasFocus,
-          'permission:',
-          Notification.permission
-        );
-
-        if (!hasFocus && Notification.permission === 'granted') {
-          console.log('Showing Claude completion notification');
-          new Notification('Claude Finished', {
+      // Show notification if window is not focused
+      if (typeof window !== 'undefined' && !document.hasFocus()) {
+        try {
+          await window.electronAPI.showNotification({
+            title: 'Claude Finished',
             body: 'Your Claude agent has completed its task.',
-            silent: false,
           });
+        } catch (error) {
+          console.error('Failed to show notification:', error);
         }
       }
 

@@ -477,7 +477,7 @@ const useCodexStream = (options?: UseCodexStreamOptions | null): UseCodexStreamR
       resetStreamState();
     };
 
-    const handleComplete = (data: {
+    const handleComplete = async (data: {
       workspaceId: string;
       exitCode: number;
       agentId: string;
@@ -530,17 +530,15 @@ const useCodexStream = (options?: UseCodexStreamOptions | null): UseCodexStreamR
 
       setMessages((prev) => [...prev, agentMessage]);
 
-      // Show notification
-      if (typeof window !== 'undefined' && 'Notification' in window) {
-        const hasFocus = document.hasFocus();
-        console.log('Codex complete - hasFocus:', hasFocus, 'permission:', Notification.permission);
-
-        if (!hasFocus && Notification.permission === 'granted') {
-          console.log('Showing Codex completion notification');
-          new Notification('Codex Finished', {
+      // Show notification if window is not focused
+      if (typeof window !== 'undefined' && !document.hasFocus()) {
+        try {
+          await window.electronAPI.showNotification({
+            title: 'Codex Finished',
             body: 'Your Codex agent has completed its task.',
-            silent: false,
           });
+        } catch (error) {
+          console.error('Failed to show notification:', error);
         }
       }
 

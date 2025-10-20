@@ -14,6 +14,7 @@ import { registerLinearIpc } from './linearIpc';
 import { registerConnectionsIpc } from './connectionsIpc';
 import { registerUpdateIpc } from '../services/updateIpc';
 import { registerTelemetryIpc } from './telemetryIpc';
+import { registerNotificationIpc } from './notificationIpc';
 
 export function registerAllIpc() {
   // Core app/utility IPC
@@ -21,6 +22,7 @@ export function registerAllIpc() {
   registerDebugIpc();
   registerTelemetryIpc();
   registerUpdateIpc();
+  registerNotificationIpc();
 
   // Domain IPC
   registerProjectIpc();

@@ -135,6 +135,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getBranchStatus: (args: { workspacePath: string }) =>
     ipcRenderer.invoke('git:get-branch-status', args),
   openExternal: (url: string) => ipcRenderer.invoke('app:openExternal', url),
+  // Notifications
+  showNotification: (args: { title: string; body: string }) =>
+    ipcRenderer.invoke('notification:show', args),
   // Telemetry (minimal, anonymous)
   captureTelemetry: (event: 'feature_used' | 'error', properties?: Record<string, any>) =>
     ipcRenderer.invoke('telemetry:capture', { event, properties }),
