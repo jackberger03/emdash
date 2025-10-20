@@ -1,12 +1,20 @@
-import { BrowserWindow, globalShortcut } from 'electron';
+import { BrowserWindow, globalShortcut, app } from 'electron';
 import { join } from 'path';
 import { isDev } from '../utils/dev';
+import { getMainWindow } from './window';
 
 let floatingWindow: BrowserWindow | null = null;
 let currentWorkspaceId: string | null = null;
 
 export function createFloatingWindow(): BrowserWindow {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
+    // Prevent dock hiding by keeping main window visible
+    const mainWindow = getMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      if (process.platform === 'darwin') {
+        app.dock.show();
+      }
+    }
     floatingWindow.showInactive(); // Show without stealing focus
     return floatingWindow;
   }
@@ -25,6 +33,7 @@ export function createFloatingWindow(): BrowserWindow {
     vibrancy: 'under-window', // macOS vibrancy
     visualEffectState: 'active',
     focusable: true, // Allow focus when user clicks
+    parent: getMainWindow() || undefined, // Set main window as parent to maintain dock presence
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

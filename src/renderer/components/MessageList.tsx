@@ -40,6 +40,7 @@ const MessageList: React.FC<MessageListProps> = ({
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [followOutput, setFollowOutput] = useState<boolean | 'smooth' | 'auto'>('smooth');
   const isUserScrollingRef = useRef(false);
+  const [isAtBottom, setIsAtBottom] = useState(true);
 
   // Reset user scrolling flag when streaming starts
   useEffect(() => {
@@ -47,6 +48,15 @@ const MessageList: React.FC<MessageListProps> = ({
       setFollowOutput('smooth');
     }
   }, [isStreaming]);
+
+  // Prevent random jumps when messages change
+  useEffect(() => {
+    // If user hasn't scrolled away, ensure we're following output
+    if (!isUserScrollingRef.current && followOutput === false) {
+      console.log('[MessageList] Auto-correcting followOutput to smooth');
+      setFollowOutput('smooth');
+    }
+  }, [messages.length, followOutput]);
 
   const renderMessage = useCallback(
     (index: number, message: Message) => {
@@ -169,46 +179,111 @@ const MessageList: React.FC<MessageListProps> = ({
     );
   }, [streamingOutput, isStreaming, awaitingThinking, providerId]);
 
+  const scrollToBottom = () => {
+    console.log('[MessageList] Manual scroll to bottom triggered');
+    isUserScrollingRef.current = false;
+    setFollowOutput('smooth');
+    virtuosoRef.current?.scrollToIndex({
+      index: messages.length - 1,
+      behavior: 'smooth',
+      align: 'end',
+    });
+  };
+
+  // Add safeguard: if we're streaming and followOutput becomes false without user action, correct it
+  const lastFollowOutputRef = useRef(followOutput);
+  useEffect(() => {
+    if (
+      isStreaming &&
+      followOutput === false &&
+      lastFollowOutputRef.current === 'smooth' &&
+      !isUserScrollingRef.current
+    ) {
+      console.warn(
+        '[MessageList] Detected unexpected followOutput change during streaming, correcting'
+      );
+      setFollowOutput('smooth');
+    }
+    lastFollowOutputRef.current = followOutput;
+  }, [followOutput, isStreaming]);
+
   return (
-    <div
-      className="flex-1 overflow-hidden"
-      style={{
-        maskImage: 'linear-gradient(to bottom, black 0%, black 93%, transparent 100%)',
-        WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 93%, transparent 100%)',
-      }}
-    >
-      <Virtuoso
-        ref={virtuosoRef}
-        data={messages}
-        itemContent={renderMessage}
-        followOutput={followOutput}
-        alignToBottom
-        increaseViewportBy={{ top: 200, bottom: 200 }}
-        components={{
-          Footer: renderFooter,
+    <div className="relative flex-1 overflow-hidden">
+      <div
+        className="h-full"
+        style={{
+          maskImage: 'linear-gradient(to bottom, black 0%, black 93%, transparent 100%)',
+          WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black 93%, transparent 100%)',
         }}
-        style={{ height: '100%' }}
-        className="px-6 pb-2 pt-6"
-        atBottomStateChange={(atBottom) => {
-          // When user scrolls away from bottom, stop auto-following
-          // When they return to bottom, resume auto-following
-          // Only update if this is a user-initiated scroll change
-          if (atBottom) {
-            setFollowOutput('smooth');
-            isUserScrollingRef.current = false;
-          } else if (!isUserScrollingRef.current) {
-            // User scrolled up - remember this
-            isUserScrollingRef.current = true;
-            setFollowOutput(false);
-          }
-        }}
-        isScrolling={(scrolling) => {
-          // Track when user is actively scrolling
-          if (scrolling && !followOutput) {
-            isUserScrollingRef.current = true;
-          }
-        }}
-      />
+      >
+        <Virtuoso
+          ref={virtuosoRef}
+          data={messages}
+          itemContent={renderMessage}
+          followOutput={followOutput}
+          alignToBottom
+          increaseViewportBy={{ top: 200, bottom: 200 }}
+          components={{
+            Footer: renderFooter,
+          }}
+          style={{ height: '100%' }}
+          className="px-6 pb-2 pt-6"
+          atBottomStateChange={(atBottom) => {
+            console.log('[MessageList] atBottomStateChange:', {
+              atBottom,
+              isUserScrolling: isUserScrollingRef.current,
+              currentFollowOutput: followOutput,
+              messageCount: messages.length,
+            });
+            setIsAtBottom(atBottom);
+            // When user scrolls away from bottom, stop auto-following
+            // When they return to bottom, resume auto-following
+            // Only update if this is a user-initiated scroll change
+            if (atBottom) {
+              if (followOutput === false) {
+                console.log('[MessageList] User returned to bottom, resuming follow');
+              }
+              setFollowOutput('smooth');
+              isUserScrollingRef.current = false;
+            } else {
+              // Only stop following if this appears to be a user-initiated scroll
+              // Don't stop following if we're currently streaming
+              if (!isUserScrollingRef.current && !isStreaming) {
+                console.log('[MessageList] User scrolled away from bottom');
+                isUserScrollingRef.current = true;
+                setFollowOutput(false);
+              } else if (isStreaming) {
+                console.log('[MessageList] Not at bottom during streaming, but maintaining follow');
+              }
+            }
+          }}
+          isScrolling={(scrolling) => {
+            // Track when user is actively scrolling
+            if (scrolling && !followOutput && !isStreaming) {
+              console.log('[MessageList] User is actively scrolling');
+              isUserScrollingRef.current = true;
+            }
+          }}
+        />
+      </div>
+
+      {/* Scroll to bottom button */}
+      {!isAtBottom && (
+        <button
+          onClick={scrollToBottom}
+          className="absolute bottom-4 right-6 rounded-full bg-blue-500 p-3 text-white shadow-lg transition-all hover:bg-blue-600 hover:shadow-xl"
+          title="Scroll to bottom"
+        >
+          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 14l-7 7m0 0l-7-7m7 7V3"
+            />
+          </svg>
+        </button>
+      )}
     </div>
   );
 };

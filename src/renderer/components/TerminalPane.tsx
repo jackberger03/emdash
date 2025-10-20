@@ -126,38 +126,11 @@ const TerminalPaneComponent: React.FC<Props> = ({
     term.focus();
     setTimeout(() => term.focus(), 0);
 
-    // Track command executions for visual separation
-    let commandCount = 0;
-    let pendingDivider: NodeJS.Timeout | null = null;
-
-    const insertCommandDivider = () => {
-      commandCount++;
-      // Subtle divider with command number
-      const divider = `\x1b[2m\x1b[38;5;240m─── #${commandCount} ${'─'.repeat(50)}\x1b[0m`;
-      term.write(`\r\n${divider}\r\n`);
-    };
-
     const keyDisp = term.onData((data) => {
       log.debug('xterm onData', JSON.stringify(data));
       try {
         onActivity && onActivity();
       } catch {}
-
-      // Detect Enter key to mark command execution
-      const isEnter = data === '\r' || data === '\n' || data === '\r\n';
-
-      if (isEnter) {
-        // Clear any pending divider
-        if (pendingDivider) {
-          clearTimeout(pendingDivider);
-        }
-
-        // Schedule a divider after command output settles
-        pendingDivider = setTimeout(() => {
-          insertCommandDivider();
-          pendingDivider = null;
-        }, 1000); // Wait 1 second after Enter to add divider
-      }
 
       window.electronAPI.ptyInput({ id, data });
     });
@@ -299,11 +272,6 @@ const TerminalPaneComponent: React.FC<Props> = ({
 
     return () => {
       console.log('[TerminalPane] Cleanup START:', { id, keepAlive });
-
-      // Clean up pending divider timer
-      if (pendingDivider) {
-        clearTimeout(pendingDivider);
-      }
 
       if (!keepAlive) {
         console.log('[TerminalPane] Killing PTY:', id);

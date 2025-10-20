@@ -58,6 +58,7 @@ export const ProviderBar: React.FC<Props> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showTerminal, setShowTerminal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const terminalContainerRef = useRef<HTMLDivElement>(null);
   const { effectiveTheme } = useTheme();
 
   // Close dropdown when clicking outside
@@ -73,6 +74,21 @@ export const ProviderBar: React.FC<Props> = ({
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
   }, [showDropdown]);
+
+  // Focus terminal when it becomes visible
+  useEffect(() => {
+    if (showTerminal && terminalContainerRef.current) {
+      // Find the xterm textarea and focus it
+      setTimeout(() => {
+        const textarea = terminalContainerRef.current?.querySelector(
+          '.xterm-helper-textarea'
+        ) as HTMLTextAreaElement;
+        if (textarea) {
+          textarea.focus();
+        }
+      }, 100);
+    }
+  }, [showTerminal]);
 
   const map = {
     qwen: { name: 'Qwen Code', logo: qwenLogo },
@@ -128,9 +144,19 @@ export const ProviderBar: React.FC<Props> = ({
           {/* Terminal Section - Always mounted but hidden when not visible to preserve state and keep PTY running */}
           {workspaceId && workspacePath && (
             <div
+              ref={terminalContainerRef}
               className={`h-48 overflow-hidden border-b border-border p-3 ${
                 showTerminal ? 'block' : 'hidden'
               }`}
+              onClick={() => {
+                // Focus terminal on click
+                const textarea = terminalContainerRef.current?.querySelector(
+                  '.xterm-helper-textarea'
+                ) as HTMLTextAreaElement;
+                if (textarea) {
+                  textarea.focus();
+                }
+              }}
             >
               <TerminalPane
                 id={`${workspaceId}-provider-terminal`}
@@ -145,49 +171,11 @@ export const ProviderBar: React.FC<Props> = ({
                     ? {
                         background: '#0a0a0a',
                         foreground: '#f2f2f2',
-                        cursor: '#f2f2f2',
-                        selectionBackground: '#f2f2f233',
-                        // Lights out - very dark with white text
-                        black: '#0a0a0a',
-                        red: '#f2f2f2',
-                        green: '#f2f2f2',
-                        yellow: '#f2f2f2',
-                        blue: '#f2f2f2',
-                        magenta: '#f2f2f2',
-                        cyan: '#f2f2f2',
-                        white: '#f2f2f2',
-                        brightBlack: '#f2f2f2',
-                        brightRed: '#f2f2f2',
-                        brightGreen: '#f2f2f2',
-                        brightYellow: '#f2f2f2',
-                        brightBlue: '#f2f2f2',
-                        brightMagenta: '#f2f2f2',
-                        brightCyan: '#f2f2f2',
-                        brightWhite: '#f2f2f2',
                       }
                     : effectiveTheme === 'dark'
                       ? {
                           background: '#374151',
                           foreground: '#ffffff',
-                          cursor: '#ffffff',
-                          selectionBackground: '#ffffff33',
-                          // Lighter gray background to contrast with card padding
-                          black: '#374151',
-                          red: '#ffffff',
-                          green: '#ffffff',
-                          yellow: '#ffffff',
-                          blue: '#ffffff',
-                          magenta: '#ffffff',
-                          cyan: '#ffffff',
-                          white: '#ffffff',
-                          brightBlack: '#ffffff',
-                          brightRed: '#ffffff',
-                          brightGreen: '#ffffff',
-                          brightYellow: '#ffffff',
-                          brightBlue: '#ffffff',
-                          brightMagenta: '#ffffff',
-                          brightCyan: '#ffffff',
-                          brightWhite: '#ffffff',
                         }
                       : undefined
                 }

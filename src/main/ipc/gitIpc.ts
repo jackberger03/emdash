@@ -515,6 +515,20 @@ current branch '${currentBranch}' ahead of base '${baseRef}'.`,
   ipcMain.handle('git:get-branch-status', async (_, args: { workspacePath: string }) => {
     const { workspacePath } = args || ({} as { workspacePath: string });
     try {
+      // Check if path exists locally - skip for SSH/remote projects
+      const { existsSync } = require('fs');
+      if (!existsSync(workspacePath)) {
+        // Path doesn't exist locally - likely an SSH/remote project
+        return {
+          success: true,
+          branch: 'main',
+          defaultBranch: 'main',
+          ahead: 0,
+          behind: 0,
+          isRemote: true,
+        };
+      }
+
       // Ensure repo
       await execAsync('git rev-parse --is-inside-work-tree', { cwd: workspacePath });
 

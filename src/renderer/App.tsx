@@ -474,14 +474,8 @@ const AppContent: React.FC = () => {
     loadAppData();
   }, []);
 
-  // Sync active workspace with floating window
-  useEffect(() => {
-    if (activeWorkspace) {
-      window.electronAPI.floatingSetWorkspace?.(activeWorkspace.id).catch((err) => {
-        console.error('Failed to set floating workspace:', err);
-      });
-    }
-  }, [activeWorkspace]);
+  // Note: Removed automatic workspace syncing with floating window
+  // The floating window now maintains its own independent workspace state
 
   // handleGitHubAuth, handleLogout come from hook; toasts handled by callers as needed
 
