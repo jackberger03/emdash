@@ -364,6 +364,55 @@ declare global {
         success: boolean;
         error?: string;
       }>;
+
+      // SSH integration
+      sshTestConnection: (args: {
+        host: string;
+        user: string;
+        remotePath: string;
+        port?: number;
+        keyPath?: string;
+      }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      sshCheckRemotePath: (args: {
+        host: string;
+        user: string;
+        remotePath: string;
+        port?: number;
+        keyPath?: string;
+      }) => Promise<{
+        exists: boolean;
+        error?: string;
+      }>;
+      sshGetDefaultKeyPath: () => Promise<{
+        success: boolean;
+        path?: string;
+        error?: string;
+      }>;
+      sshListAvailableKeys: () => Promise<{
+        success: boolean;
+        keys?: string[];
+        error?: string;
+      }>;
+      sshExecuteCommand: (args: {
+        projectId: string;
+        config: {
+          host: string;
+          user: string;
+          remotePath: string;
+          port?: number;
+          keyPath?: string;
+        };
+        command: string;
+      }) => Promise<{
+        success: boolean;
+        stdout?: string;
+        stderr?: string;
+        error?: string;
+      }>;
+
       // Linear integration
       linearCheckConnection?: () => Promise<{
         connected: boolean;

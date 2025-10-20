@@ -20,10 +20,5 @@
     }
   },
   "include": ["src/main/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "src/main/services/SSHService.ts",
-    "src/main/ipc/sshIpc.ts"
-  ]
+  "exclude": ["node_modules", "dist"]
 }

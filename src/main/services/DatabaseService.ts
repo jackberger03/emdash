@@ -17,6 +17,14 @@ export interface Project {
     repository: string;
     connected: boolean;
   };
+  sshInfo?: {
+    enabled: boolean;
+    host: string;
+    user: string;
+    remotePath: string;
+    port?: number;
+    keyPath?: string;
+  };
   createdAt: string;
   updatedAt: string;
 }

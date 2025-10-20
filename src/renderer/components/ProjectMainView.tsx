@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from './ui/button';
-import { GitBranch, Plus, Loader2, RefreshCw, Trash, ChevronDown } from 'lucide-react';
+import { GitBranch, Plus, Loader2, RefreshCw, Trash, ChevronDown, Server } from 'lucide-react';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList } from './ui/breadcrumb';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
@@ -14,6 +14,7 @@ import { Spinner } from './ui/spinner';
 import WorkspaceDeleteButton from './WorkspaceDeleteButton';
 import AgentSelectionDialog from './AgentSelectionDialog';
 import GitHubDetailModal from './GitHubDetailModal';
+import SSHConfigModal from './SSHConfigModal';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import type { Provider } from '../types';
 import { type Workspace, type WorkspaceMetadata } from '../types/chat';
@@ -30,6 +31,14 @@ interface Project {
   githubInfo?: {
     repository: string;
     connected: boolean;
+  };
+  sshInfo?: {
+    enabled: boolean;
+    host: string;
+    user: string;
+    remotePath: string;
+    port?: number;
+    keyPath?: string;
   };
   workspaces?: Workspace[];
 }

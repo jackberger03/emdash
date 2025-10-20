@@ -186,6 +186,36 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('github:closeIssue', args),
   githubReopenIssue: (args: { projectPath: string; issueNumber: number; comment?: string }) =>
     ipcRenderer.invoke('github:reopenIssue', args),
+
+  // SSH integration
+  sshTestConnection: (args: {
+    host: string;
+    user: string;
+    remotePath: string;
+    port?: number;
+    keyPath?: string;
+  }) => ipcRenderer.invoke('ssh:testConnection', args),
+  sshCheckRemotePath: (args: {
+    host: string;
+    user: string;
+    remotePath: string;
+    port?: number;
+    keyPath?: string;
+  }) => ipcRenderer.invoke('ssh:checkRemotePath', args),
+  sshGetDefaultKeyPath: () => ipcRenderer.invoke('ssh:getDefaultKeyPath'),
+  sshListAvailableKeys: () => ipcRenderer.invoke('ssh:listAvailableKeys'),
+  sshExecuteCommand: (args: {
+    projectId: string;
+    config: {
+      host: string;
+      user: string;
+      remotePath: string;
+      port?: number;
+      keyPath?: string;
+    };
+    command: string;
+  }) => ipcRenderer.invoke('ssh:executeCommand', args),
+
   // Linear integration
   linearSaveToken: (token: string) => ipcRenderer.invoke('linear:saveToken', token),
   linearCheckConnection: () => ipcRenderer.invoke('linear:checkConnection'),

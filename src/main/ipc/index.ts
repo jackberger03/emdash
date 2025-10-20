@@ -15,6 +15,7 @@ import { registerConnectionsIpc } from './connectionsIpc';
 import { registerUpdateIpc } from '../services/updateIpc';
 import { registerTelemetryIpc } from './telemetryIpc';
 import { registerNotificationIpc } from './notificationIpc';
+import { registerSSHIpc } from './sshIpc';
 
 export function registerAllIpc() {
   // Core app/utility IPC
@@ -29,6 +30,7 @@ export function registerAllIpc() {
   registerGithubIpc();
   registerDatabaseIpc();
   registerGitIpc();
+  registerSSHIpc();
 
   // Existing modules
   registerPtyIpc();
