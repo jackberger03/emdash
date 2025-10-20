@@ -115,7 +115,7 @@ const WorkspaceTerminalPanelComponent: React.FC<Props> = ({ workspace, sshInfo, 
   return (
     <div className={`flex h-full flex-col bg-white dark:bg-gray-800 ${className || ''}`}>
       {/* Header with collapse button, terminal icon, and tabs */}
-      <div className="flex items-center border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
+      <div className="relative z-10 flex items-center border-b border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900">
         <button
           type="button"
           onClick={toggleCollapse}
