@@ -88,6 +88,7 @@ const ChatInterface: React.FC<Props> = ({
   className,
   initialProvider,
   paneId,
+  sshInfo,
 }) => {
   // Use paneId if provided, otherwise use workspace.id for backwards compatibility
   const effectiveWorkspaceId = paneId || workspace.id;
@@ -683,6 +684,7 @@ const ChatInterface: React.FC<Props> = ({
         workspacePath={workspace.path}
         theme={effectiveTheme === 'light' ? 'light' : 'dark'}
         branch={workspace.branch}
+        sshConfig={sshInfo?.enabled ? sshInfo : undefined}
       />
     </div>
   );

@@ -20,6 +20,14 @@ import qwenLogo from '../../assets/images/qwen.png';
 import augmentLogo from '../../assets/images/augmentcode.png';
 import { useTheme } from './ThemeProvider';
 
+interface SSHConfig {
+  host: string;
+  user: string;
+  remotePath: string;
+  port?: number;
+  keyPath?: string;
+}
+
 type Props = {
   provider: Provider;
   linearIssue?: LinearIssueSummary | null;
@@ -30,6 +38,7 @@ type Props = {
   workspacePath?: string;
   theme?: 'dark' | 'light';
   branch?: string;
+  sshConfig?: SSHConfig;
 };
 
 export const ProviderBar: React.FC<Props> = ({
@@ -42,6 +51,7 @@ export const ProviderBar: React.FC<Props> = ({
   workspacePath,
   theme = 'dark',
   branch,
+  sshConfig,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showTerminal, setShowTerminal] = useState(false);
@@ -127,6 +137,7 @@ export const ProviderBar: React.FC<Props> = ({
                 className="h-full w-full"
                 rows={10}
                 keepAlive={true}
+                sshConfig={sshConfig}
                 themeOverride={
                   effectiveTheme === 'lightsout'
                     ? {

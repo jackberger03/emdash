@@ -1393,6 +1393,7 @@ const AppContent: React.FC = () => {
                           ? activeWorkspaceProvider || undefined
                           : undefined
                       }
+                      sshInfo={selectedProject.sshInfo}
                     />
                   </div>
                 );
