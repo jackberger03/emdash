@@ -178,6 +178,8 @@ const ChatTerminalComponent: React.FC<Props> = ({
         s = s.replace(/rgb:[0-9a-fA-F]+(?:\/[0-9a-fA-F]+)*/g, '');
         s = s.replace(/(?:^|\s)([0-9a-fA-F]{4})(?=\s|$)/g, ' ');
         s = s.replace(/\x1b\]\d+;[^\x07\x1b]*\x07?/g, '');
+        s = s.replace(/\x1b\[>\d+(?:;\d+)*c/g, '');
+        s = s.replace(/>[_\?]?\d+(?:;\d+)*c/g, '');
         s = s.replace(/\n\s*\n/g, '\n');
         return s;
       } catch {

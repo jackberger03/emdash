@@ -150,14 +150,32 @@ export function startPty(options: {
 
     const keyPath = sshConfig.keyPath || getDefaultSSHKeyPath();
     const port = sshConfig.port || 22;
+    const remotePath = sshConfig.remotePath?.trim() ? sshConfig.remotePath.trim() : '~';
+    const { session, socket } = buildTmuxIdentifiers(id);
+    const remoteSocketDir = '$HOME/.emdash-tmux';
+    const remoteSocketPath = `${remoteSocketDir}/${socket}`;
+    const initialCols = Math.max(20, cols);
+    const initialRows = Math.max(10, rows);
+    const remoteShellCommand = (shell || '$SHELL -i -l').trim();
+    const remoteShellEscaped = remoteShellCommand.replace(/'/g, "'\\''");
+    const remoteDirEscaped = remotePath.replace(/'/g, "'\\''");
 
-    // Build SSH args: -i keyPath -p port user@host -t "cd remotePath && shell"
-    // When a custom shell command is provided (like 'claude'), we need to ensure
-    // the remote shell environment is fully loaded so npm global binaries are in PATH.
-    // We do this by starting an interactive login shell and then executing the command.
-    const remoteCommand = shell
-      ? `cd ${sshConfig.remotePath} && $SHELL -i -l -c '${shell.replace(/'/g, "'\\''")}'`
-      : `cd ${sshConfig.remotePath} && exec $SHELL`;
+    const remoteScriptParts = [
+      `__EMDASH_SOCKET=\"${remoteSocketPath}\"`,
+      `__EMDASH_SESSION=\"${session}\"`,
+      `__EMDASH_DIR='${remoteDirEscaped}'`,
+      `__EMDASH_CONF=\"${remoteSocketDir}/tmux.conf\"`,
+      'if command -v tmux >/dev/null 2>&1; then',
+      '  mkdir -p "$(dirname \"$__EMDASH_SOCKET\")"',
+      '  if [ ! -f "$__EMDASH_CONF" ]; then printf %s\\n "set-option -g status off" "set-option -g set-titles on" "set-option -g mouse off" > "$__EMDASH_CONF"; fi',
+      `  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" '${remoteShellEscaped}'`,
+      '  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" attach-session -t "$__EMDASH_SESSION"',
+      'else',
+      `  cd "$__EMDASH_DIR" && exec '${remoteShellEscaped}'`,
+      'fi',
+    ];
+    const remoteScript = remoteScriptParts.join(' ; ');
+    const remoteCommand = `sh -lc '${remoteScript.replace(/'/g, "'\\''")}'`;
 
     args = [
       '-i',

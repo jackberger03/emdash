@@ -186,6 +186,9 @@ const TerminalPaneComponent: React.FC<Props> = ({
         s = s.replace(/(?:^|\s)([0-9a-fA-F]{4})(?=\s|$)/g, ' ');
         // Remove OSC with escape sequences
         s = s.replace(/\x1b\]\d+;[^\x07\x1b]*\x07?/g, '');
+        // Remove DEC private reports like ESC > 1;2c and stray fallbacks
+        s = s.replace(/\x1b\[>\d+(?:;\d+)*c/g, '');
+        s = s.replace(/>[_\?]?\d+(?:;\d+)*c/g, '');
         // Clean up multiple spaces/newlines that might be left
         s = s.replace(/\n\s*\n/g, '\n');
 
