@@ -12,6 +12,13 @@ declare global {
         env?: Record<string, string>;
         cols?: number;
         rows?: number;
+        sshConfig?: {
+          host: string;
+          user: string;
+          remotePath: string;
+          port?: number;
+          keyPath?: string;
+        };
       }) => Promise<{ ok: boolean }>;
       ptyInput: (args: { id: string; data: string }) => void;
       ptyResize: (args: { id: string; cols: number; rows: number }) => void;
