@@ -1116,7 +1116,11 @@ const AppContent: React.FC = () => {
             onCollapsedChange={handleRightSidebarCollapsedChange}
             setCollapsedRef={rightSidebarSetCollapsedRef}
           />
-          <Titlebar onToggleSettings={handleToggleSettings} isSettingsOpen={showSettings} />
+          <Titlebar
+            onToggleSettings={handleToggleSettings}
+            isSettingsOpen={showSettings}
+            currentPath={activeWorkspace?.path || selectedProject?.path || null}
+          />
           <div className="flex flex-1 overflow-hidden pt-[var(--tb)]">
             <ResizablePanelGroup
               direction="horizontal"

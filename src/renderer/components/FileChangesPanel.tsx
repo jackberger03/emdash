@@ -246,26 +246,26 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({ workspaceI
                 )}
               </div>
               <Button
-                variant="outline"
-                size="sm"
-                className="h-8 border-gray-200 px-2 text-xs text-gray-700 dark:border-gray-700 dark:text-gray-200"
-                disabled={isCreatingPR}
-                title="Commit all changes and create a pull request"
-                onClick={async () => {
-                  await createPR({
-                    workspacePath: workspaceId,
-                    onSuccess: async () => {
-                      await refreshChanges();
-                      try {
-                        await refreshPr();
-                      } catch {}
-                    },
-                  });
-                }}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 border-gray-200 px-2 text-xs text-gray-700 dark:border-gray-700 dark:text-gray-200"
+                  disabled={isCreatingPR}
+                  title="Commit all changes and create a pull request"
+                  onClick={async () => {
+                    await createPR({
+                      workspacePath: workspaceId,
+                      onSuccess: async () => {
+                        await refreshChanges();
+                        try {
+                          await refreshPr();
+                        } catch {}
+                      },
+                    });
+                  }}
               >
                 {isCreatingPR ? <Spinner size="sm" /> : 'Create PR'}
               </Button>
-            </div>
+              </div>
 
             {hasStagedChanges && (
               <div className="flex items-center space-x-2">
