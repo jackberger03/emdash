@@ -95,6 +95,9 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7"
   },
+  "optionalDependencies": {
+    "cpu-features": "^0.0.10"
+  },
   "build": {
     "appId": "com.emdash",
     "productName": "emdash",
@@ -119,6 +122,7 @@
       "node_modules/keytar/**/*"
     ],
     "npmRebuild": false,
+    "buildDependenciesFromSource": false,
     "mac": {
       "category": "public.app-category.developer-tools",
       "target": [
