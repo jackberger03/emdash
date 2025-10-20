@@ -958,6 +958,30 @@ const AppContent: React.FC = () => {
     });
   };
 
+  const handleDeleteProject = async (project: Project) => {
+    try {
+      const res = await window.electronAPI.deleteProject(project.id);
+      if (!res?.success) throw new Error(res?.error || 'Failed to delete project');
+
+      setProjects((prev) => prev.filter((p) => p.id !== project.id));
+      if (selectedProject?.id === project.id) {
+        setSelectedProject(null);
+        setActiveWorkspace(null);
+        setShowHomeView(true);
+      }
+      toast({ title: 'Project deleted', description: `"${project.name}" was removed.` });
+    } catch (err) {
+      const { log } = await import('./lib/logger');
+      log.error('Delete project failed:', err as any);
+      toast({
+        title: 'Error',
+        description:
+          err instanceof Error ? err.message : 'Could not delete project. See console for details.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const renderMainContent = () => {
     if (showHomeView) {
       return (
@@ -1030,6 +1054,7 @@ const AppContent: React.FC = () => {
               onSelectWorkspace={handleSelectWorkspace}
               onDeleteWorkspace={handleDeleteWorkspace}
               isCreatingWorkspace={isCreatingWorkspace}
+              onDeleteProject={handleDeleteProject}
             />
           )}
         </div>
