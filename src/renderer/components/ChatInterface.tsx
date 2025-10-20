@@ -45,6 +45,7 @@ interface Props {
   initialProvider?: Provider;
   paneId?: string; // Optional pane ID for split pane isolation
   sshInfo?: SSHInfo;
+  compact?: boolean; // Compact mode for floating window
 }
 
 // Helper to build shell command with flags based on provider config
@@ -89,6 +90,7 @@ const ChatInterface: React.FC<Props> = ({
   initialProvider,
   paneId,
   sshInfo,
+  compact = false,
 }) => {
   // Use paneId if provided, otherwise use workspace.id for backwards compatibility
   const effectiveWorkspaceId = paneId || workspace.id;
@@ -530,7 +532,9 @@ const ChatInterface: React.FC<Props> = ({
   );
 
   return (
-    <div className={`flex h-full flex-col bg-background ${className}`}>
+    <div
+      className={`flex h-full flex-col ${compact ? 'bg-transparent' : 'bg-background'} ${className}`}
+    >
       {isTerminal ? (
         <div className="flex min-h-0 flex-1 flex-col">
           <div className="px-6 pt-4">
@@ -685,6 +689,7 @@ const ChatInterface: React.FC<Props> = ({
         theme={effectiveTheme === 'light' ? 'light' : 'dark'}
         branch={workspace.branch}
         sshConfig={sshInfo?.enabled ? sshInfo : undefined}
+        compact={compact}
       />
     </div>
   );

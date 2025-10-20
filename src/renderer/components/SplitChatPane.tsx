@@ -47,25 +47,48 @@ interface SplitChatPaneProps {
   sshInfo?: SSHInfo;
 }
 
-// Wrapper component that passes paneId for state isolation
+// Wrapper component that passes paneId for state isolation and handles responsive compact mode
 const PaneWrapper: React.FC<{
   workspace: Workspace;
   paneId: string;
   projectName: string;
   provider?: Provider;
-  className?: string;
   sshInfo?: SSHInfo;
 }> = React.memo(
-  ({ workspace, paneId, projectName, provider, className, sshInfo }) => {
+  ({ workspace, paneId, projectName, provider, sshInfo }) => {
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [isCompact, setIsCompact] = useState(false);
+
+    useEffect(() => {
+      if (!containerRef.current) return;
+
+      const resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const width = entry.contentRect.width;
+          // Enable compact mode when width is less than 600px
+          setIsCompact(width < 600);
+        }
+      });
+
+      resizeObserver.observe(containerRef.current);
+
+      return () => {
+        resizeObserver.disconnect();
+      };
+    }, []);
+
     return (
-      <ChatInterface
-        workspace={workspace}
-        projectName={projectName}
-        className={className}
-        initialProvider={provider}
-        paneId={paneId}
-        sshInfo={sshInfo}
-      />
+      <div ref={containerRef} className="h-full">
+        <ChatInterface
+          workspace={workspace}
+          projectName={projectName}
+          className="h-full"
+          initialProvider={provider}
+          paneId={paneId}
+          sshInfo={sshInfo}
+          compact={isCompact}
+        />
+      </div>
     );
   },
   (prevProps, nextProps) => {
@@ -75,7 +98,6 @@ const PaneWrapper: React.FC<{
       prevProps.workspace.id === nextProps.workspace.id &&
       prevProps.projectName === nextProps.projectName &&
       prevProps.provider === nextProps.provider &&
-      prevProps.className === nextProps.className &&
       JSON.stringify(prevProps.sshInfo) === JSON.stringify(nextProps.sshInfo)
     );
   }
@@ -370,17 +392,12 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
   const renderNode = (node: PaneNode, parentKey: string = 'root'): React.ReactElement => {
     if (node.type === 'chat') {
       return (
-        <div
-          key={node.id}
-          className={`relative h-full ${focusedPaneId === node.id ? 'ring-2 ring-inset ring-blue-500' : 'ring-1 ring-inset ring-gray-200'}`}
-          onClick={() => setFocusedPaneId(node.id)}
-        >
+        <div key={node.id} className="relative h-full" onClick={() => setFocusedPaneId(node.id)}>
           <PaneWrapper
             workspace={workspace}
             paneId={node.id}
             projectName={projectName}
             provider={node.provider}
-            className="h-full"
             sshInfo={sshInfo}
           />
         </div>

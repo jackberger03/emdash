@@ -39,6 +39,7 @@ type Props = {
   theme?: 'dark' | 'light';
   branch?: string;
   sshConfig?: SSHConfig;
+  compact?: boolean; // Compact mode for floating window - hide text labels
 };
 
 export const ProviderBar: React.FC<Props> = ({
@@ -52,6 +53,7 @@ export const ProviderBar: React.FC<Props> = ({
   theme = 'dark',
   branch,
   sshConfig,
+  compact = false,
 }) => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showTerminal, setShowTerminal] = useState(false);
@@ -119,7 +121,7 @@ export const ProviderBar: React.FC<Props> = ({
       <div className="mx-auto max-w-4xl">
         <div
           ref={dropdownRef}
-          className={`relative rounded-md border border-border bg-card shadow-lg transition-all duration-200 ${
+          className={`relative rounded-md border ${compact ? 'border-white/10 backdrop-blur-xl' : 'border-border bg-card'} shadow-lg transition-all duration-200 ${
             showTerminal ? 'h-64' : ''
           }`}
         >
@@ -226,8 +228,10 @@ export const ProviderBar: React.FC<Props> = ({
                           {cfg.name.slice(0, 1)}
                         </div>
                       )}
-                      <span className="max-w-[12rem] truncate font-medium">{cfg.name}</span>
-                      {allowChange && onProviderChange && (
+                      {!compact && (
+                        <span className="max-w-[12rem] truncate font-medium">{cfg.name}</span>
+                      )}
+                      {!compact && allowChange && onProviderChange && (
                         <ChevronDown className="h-3 w-3 text-muted-foreground" />
                       )}
                     </button>
@@ -450,8 +454,8 @@ export const ProviderBar: React.FC<Props> = ({
 
             {/* Right side - Folder/Branch Info + Terminal Button */}
             <div className="flex items-center gap-3">
-              {/* Folder and Branch Info */}
-              {(folderName || branch) && (
+              {/* Folder and Branch Info - Hidden in compact mode */}
+              {!compact && (folderName || branch) && (
                 <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
                   {folderName && (
                     <span className="max-w-[200px] truncate font-medium" title={folderName}>
@@ -520,7 +524,7 @@ export const ProviderBar: React.FC<Props> = ({
                         title={showTerminal ? 'Hide Terminal' : 'Show Terminal'}
                       >
                         <Terminal className="h-3.5 w-3.5" />
-                        <span className="font-medium">Terminal</span>
+                        {!compact && <span className="font-medium">Terminal</span>}
                       </button>
                     </TooltipTrigger>
                     <TooltipContent>

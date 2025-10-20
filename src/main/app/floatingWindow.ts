@@ -7,8 +7,7 @@ let currentWorkspaceId: string | null = null;
 
 export function createFloatingWindow(): BrowserWindow {
   if (floatingWindow && !floatingWindow.isDestroyed()) {
-    floatingWindow.show();
-    floatingWindow.focus();
+    floatingWindow.showInactive(); // Show without stealing focus
     return floatingWindow;
   }
 
@@ -25,6 +24,7 @@ export function createFloatingWindow(): BrowserWindow {
     hasShadow: true,
     vibrancy: 'under-window', // macOS vibrancy
     visualEffectState: 'active',
+    focusable: true, // Allow focus when user clicks
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -32,6 +32,20 @@ export function createFloatingWindow(): BrowserWindow {
     },
     show: false,
   });
+
+  // Set window level to absolute highest - appears above everything including full-screen apps
+  // 'screen-saver' is the highest level and will show above all full-screen windows
+  floatingWindow.setAlwaysOnTop(true, 'screen-saver');
+
+  // Make window visible on all macOS Spaces/Desktops (including full-screen apps)
+  floatingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+
+  // Additional: Set window collection behavior to allow it to appear on full-screen spaces
+  // This ensures it shows up even when switching to full-screen apps
+  if (process.platform === 'darwin') {
+    // NSWindowCollectionBehaviorCanJoinAllSpaces | NSWindowCollectionBehaviorFullScreenAuxiliary
+    floatingWindow.setWindowButtonVisibility(false);
+  }
 
   if (isDev) {
     floatingWindow.loadURL('http://localhost:3000/#/floating-chat');
@@ -41,9 +55,9 @@ export function createFloatingWindow(): BrowserWindow {
     });
   }
 
-  // Show when ready
+  // Show when ready - don't steal focus from main window
   floatingWindow.once('ready-to-show', () => {
-    floatingWindow?.show();
+    floatingWindow?.showInactive();
   });
 
   // Keep reference after close (hidden instead of destroyed)
@@ -63,8 +77,8 @@ export function toggleFloatingWindow(): void {
   } else if (floatingWindow.isVisible()) {
     floatingWindow.hide();
   } else {
-    floatingWindow.show();
-    floatingWindow.focus();
+    // Show without stealing focus from main app
+    floatingWindow.showInactive();
   }
 }
 

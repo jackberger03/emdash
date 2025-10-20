@@ -39,6 +39,14 @@ const MessageList: React.FC<MessageListProps> = ({
 }) => {
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [followOutput, setFollowOutput] = useState<boolean | 'smooth' | 'auto'>('smooth');
+  const isUserScrollingRef = useRef(false);
+
+  // Reset user scrolling flag when streaming starts
+  useEffect(() => {
+    if (isStreaming && !isUserScrollingRef.current) {
+      setFollowOutput('smooth');
+    }
+  }, [isStreaming]);
 
   const renderMessage = useCallback(
     (index: number, message: Message) => {
@@ -184,7 +192,21 @@ const MessageList: React.FC<MessageListProps> = ({
         atBottomStateChange={(atBottom) => {
           // When user scrolls away from bottom, stop auto-following
           // When they return to bottom, resume auto-following
-          setFollowOutput(atBottom ? 'smooth' : false);
+          // Only update if this is a user-initiated scroll change
+          if (atBottom) {
+            setFollowOutput('smooth');
+            isUserScrollingRef.current = false;
+          } else if (!isUserScrollingRef.current) {
+            // User scrolled up - remember this
+            isUserScrollingRef.current = true;
+            setFollowOutput(false);
+          }
+        }}
+        isScrolling={(scrolling) => {
+          // Track when user is actively scrolling
+          if (scrolling && !followOutput) {
+            isUserScrollingRef.current = true;
+          }
         }}
       />
     </div>
