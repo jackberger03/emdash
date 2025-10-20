@@ -13,15 +13,18 @@ export function createFloatingWindow(): BrowserWindow {
   }
 
   floatingWindow = new BrowserWindow({
-    width: 400,
-    height: 600,
-    minWidth: 300,
-    minHeight: 400,
+    width: 450,
+    height: 650,
+    minWidth: 350,
+    minHeight: 450,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     skipTaskbar: true, // Don't show in taskbar/dock
     resizable: true,
+    hasShadow: true,
+    vibrancy: 'under-window', // macOS vibrancy
+    visualEffectState: 'active',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

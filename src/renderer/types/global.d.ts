@@ -160,9 +160,7 @@ declare global {
       }>;
       // Floating window
       floatingToggle?: () => Promise<{ success: boolean; error?: string }>;
-      floatingSetWorkspace?: (
-        workspaceId: string
-      ) => Promise<{ success: boolean; error?: string }>;
+      floatingSetWorkspace?: (workspaceId: string) => Promise<{ success: boolean; error?: string }>;
       floatingGetWorkspace?: () => Promise<{
         success: boolean;
         workspaceId?: string | null;
