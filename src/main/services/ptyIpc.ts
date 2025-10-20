@@ -41,7 +41,15 @@ export function registerPtyIpc(): void {
         // Reuse existing PTY if present; otherwise create new
         const existing = getPty(id);
         const proc = existing ?? startPty({ id, cwd, shell, env, cols, rows, sshConfig });
-        log.debug('pty:start OK', { id, cwd, shell, cols, rows, isSSH: !!sshConfig, reused: !!existing });
+        log.debug('pty:start OK', {
+          id,
+          cwd,
+          shell,
+          cols,
+          rows,
+          isSSH: !!sshConfig,
+          reused: !!existing,
+        });
         const wc = event.sender;
         owners.set(id, wc);
 

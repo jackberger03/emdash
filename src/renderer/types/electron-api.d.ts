@@ -558,6 +558,17 @@ declare global {
       onCodexStreamComplete: (
         listener: (data: { workspaceId: string; exitCode: number; agentId: string }) => void
       ) => () => void;
+
+      // Floating window
+      floatingToggle: () => Promise<{ success: boolean; error?: string }>;
+      floatingSetWorkspace: (workspaceId: string) => Promise<{ success: boolean; error?: string }>;
+      floatingGetWorkspace: () => Promise<{
+        success: boolean;
+        workspaceId?: string | null;
+        error?: string;
+      }>;
+      floatingShow: () => Promise<{ success: boolean; error?: string }>;
+      onFloatingWorkspaceChanged: (listener: (workspaceId: string) => void) => () => void;
     };
   }
 }
@@ -948,4 +959,15 @@ export interface ElectronAPI {
       conversationId?: string;
     }) => void
   ) => () => void;
+
+  // Floating window
+  floatingToggle: () => Promise<{ success: boolean; error?: string }>;
+  floatingSetWorkspace: (workspaceId: string) => Promise<{ success: boolean; error?: string }>;
+  floatingGetWorkspace: () => Promise<{
+    success: boolean;
+    workspaceId?: string | null;
+    error?: string;
+  }>;
+  floatingShow: () => Promise<{ success: boolean; error?: string }>;
+  onFloatingWorkspaceChanged: (listener: (workspaceId: string) => void) => () => void;
 }

@@ -102,13 +102,13 @@ function WorkspaceRow({
       tabIndex={0}
       className={[
         'group flex items-start justify-between gap-3 rounded-2xl',
-        'bg-white/40 dark:bg-white/5 backdrop-blur-xl',
+        'bg-white/40 backdrop-blur-xl dark:bg-white/5',
         'border border-white/20 dark:border-white/10',
         'px-5 py-4 transition-all duration-300',
-        'hover:bg-white/60 dark:hover:bg-white/10 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20',
-        'hover:scale-[1.01] hover:-translate-y-0.5',
+        'hover:bg-white/60 hover:shadow-lg hover:shadow-black/5 dark:hover:bg-white/10 dark:hover:shadow-black/20',
+        'hover:-translate-y-0.5 hover:scale-[1.01]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
-        active ? 'ring-2 ring-primary/50 shadow-lg shadow-primary/10' : '',
+        active ? 'shadow-lg shadow-primary/10 ring-2 ring-primary/50' : '',
       ].join(' ')}
     >
       <div className="min-w-0">
@@ -401,7 +401,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                     onClick={onCreateWorkspace}
                     disabled={isCreatingWorkspace}
                     aria-busy={isCreatingWorkspace}
-                    className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isCreatingWorkspace ? (
                       <>
@@ -450,7 +450,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                     <button
                       onClick={() => loadIssues()}
                       disabled={issuesLoading}
-                      className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <RefreshCw className={`size-4 ${issuesLoading ? 'animate-spin' : ''}`} />
                       Refresh
@@ -486,7 +486,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                         {issues.map((issue) => (
                           <div
                             key={issue.id}
-                            className="flex cursor-pointer items-start justify-between gap-3 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 px-5 py-4 transition-all duration-300 hover:bg-white/60 dark:hover:bg-white/10 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:scale-[1.01] hover:-translate-y-0.5"
+                            className="flex cursor-pointer items-start justify-between gap-3 rounded-2xl border border-white/20 bg-white/40 px-5 py-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01] hover:bg-white/60 hover:shadow-lg hover:shadow-black/5 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 dark:hover:shadow-black/20"
                             onClick={() => {
                               setDetailModalType('issue');
                               setDetailModalNumber(issue.number);
@@ -516,7 +516,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                                       return (
                                         <span
                                           key={idx}
-                                          className="rounded-full px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm border"
+                                          className="rounded-full border px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm"
                                           style={{
                                             backgroundColor: `${hexColor}20`,
                                             borderColor: `${hexColor}40`,
@@ -565,7 +565,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                     <button
                       onClick={() => refreshPrs()}
                       disabled={prsLoading}
-                      className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <RefreshCw className={`size-4 ${prsLoading ? 'animate-spin' : ''}`} />
                       Refresh
@@ -603,7 +603,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                           return (
                             <div
                               key={pr.number}
-                              className="flex cursor-pointer items-start justify-between gap-3 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 px-5 py-4 transition-all duration-300 hover:bg-white/60 dark:hover:bg-white/10 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:scale-[1.01] hover:-translate-y-0.5"
+                              className="flex cursor-pointer items-start justify-between gap-3 rounded-2xl border border-white/20 bg-white/40 px-5 py-4 backdrop-blur-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.01] hover:bg-white/60 hover:shadow-lg hover:shadow-black/5 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10 dark:hover:shadow-black/20"
                               onClick={() => {
                                 setDetailModalType('pr');
                                 setDetailModalNumber(pr.number);
@@ -644,7 +644,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                                     handleOpenAgentDialog(pr);
                                   }}
                                   disabled={isCheckingOut}
-                                  className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                   {isCheckingOut ? (
                                     <>

@@ -158,6 +158,18 @@ declare global {
         issues?: any[];
         error?: string;
       }>;
+      // Floating window
+      floatingToggle?: () => Promise<{ success: boolean; error?: string }>;
+      floatingSetWorkspace?: (
+        workspaceId: string
+      ) => Promise<{ success: boolean; error?: string }>;
+      floatingGetWorkspace?: () => Promise<{
+        success: boolean;
+        workspaceId?: string | null;
+        error?: string;
+      }>;
+      floatingShow?: () => Promise<{ success: boolean; error?: string }>;
+      onFloatingWorkspaceChanged?: (listener: (workspaceId: string) => void) => () => void;
       // Database methods
       getProjects: () => Promise<any[]>;
       saveProject: (project: any) => Promise<{ success: boolean; error?: string }>;

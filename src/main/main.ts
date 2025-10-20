@@ -36,6 +36,7 @@ import { registerAppLifecycle } from './app/lifecycle';
 import { registerAllIpc } from './ipc';
 import { databaseService } from './services/DatabaseService';
 import * as telemetry from './telemetry';
+import { registerFloatingHotkey } from './app/floatingWindow';
 
 // App bootstrap
 app.whenReady().then(async () => {
@@ -72,6 +73,9 @@ app.whenReady().then(async () => {
 
   // Register IPC handlers
   registerAllIpc();
+
+  // Register global hotkey for floating window
+  registerFloatingHotkey();
 
   // Create main window
   createMainWindow();

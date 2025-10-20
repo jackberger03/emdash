@@ -70,13 +70,17 @@ export function startPty(options: {
 
     // Build SSH args: -i keyPath -p port user@host -t "cd remotePath && shell"
     args = [
-      '-i', keyPath,
-      '-p', String(port),
-      '-o', 'StrictHostKeyChecking=no',  // Auto-accept host keys
-      '-o', 'ServerAliveInterval=60',    // Keep connection alive
+      '-i',
+      keyPath,
+      '-p',
+      String(port),
+      '-o',
+      'StrictHostKeyChecking=no', // Auto-accept host keys
+      '-o',
+      'ServerAliveInterval=60', // Keep connection alive
       `${sshConfig.user}@${sshConfig.host}`,
-      '-t',  // Force PTY allocation
-      `cd ${sshConfig.remotePath} && exec ${shell || '$SHELL'}`  // cd to remote path and start shell
+      '-t', // Force PTY allocation
+      `cd ${sshConfig.remotePath} && exec ${shell || '$SHELL'}`, // cd to remote path and start shell
     ];
 
     // For SSH, cwd is local (doesn't matter much, but use home)

@@ -16,6 +16,7 @@ import { registerUpdateIpc } from '../services/updateIpc';
 import { registerTelemetryIpc } from './telemetryIpc';
 import { registerNotificationIpc } from './notificationIpc';
 import { registerSSHIpc } from './sshIpc';
+import { registerFloatingIpc } from './floatingIpc';
 
 export function registerAllIpc() {
   // Core app/utility IPC
@@ -24,6 +25,7 @@ export function registerAllIpc() {
   registerTelemetryIpc();
   registerUpdateIpc();
   registerNotificationIpc();
+  registerFloatingIpc();
 
   // Domain IPC
   registerProjectIpc();

@@ -214,7 +214,7 @@ export const GitHubDetailModal: React.FC<GitHubDetailModalProps> = ({
                     return (
                       <span
                         key={idx}
-                        className="rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm border"
+                        className="rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-sm"
                         style={{
                           backgroundColor: `${hexColor}20`,
                           borderColor: `${hexColor}40`,

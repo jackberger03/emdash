@@ -391,6 +391,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on(channel, wrapped);
     return () => ipcRenderer.removeListener(channel, wrapped);
   },
+
+  // Floating window
+  floatingToggle: () => ipcRenderer.invoke('floating:toggle'),
+  floatingSetWorkspace: (workspaceId: string) =>
+    ipcRenderer.invoke('floating:setWorkspace', workspaceId),
+  floatingGetWorkspace: () => ipcRenderer.invoke('floating:getWorkspace'),
+  floatingShow: () => ipcRenderer.invoke('floating:show'),
+  onFloatingWorkspaceChanged: (listener: (workspaceId: string) => void) => {
+    const wrapped = (_: Electron.IpcRendererEvent, workspaceId: string) => listener(workspaceId);
+    ipcRenderer.on('floating:workspace-changed', wrapped);
+    return () => ipcRenderer.removeListener('floating:workspace-changed', wrapped);
+  },
 });
 
 // Type definitions for the exposed API
@@ -677,6 +689,17 @@ export interface ElectronAPI {
       exitCode: number;
     }) => void
   ) => () => void;
+
+  // Floating window
+  floatingToggle: () => Promise<{ success: boolean; error?: string }>;
+  floatingSetWorkspace: (workspaceId: string) => Promise<{ success: boolean; error?: string }>;
+  floatingGetWorkspace: () => Promise<{
+    success: boolean;
+    workspaceId?: string | null;
+    error?: string;
+  }>;
+  floatingShow: () => Promise<{ success: boolean; error?: string }>;
+  onFloatingWorkspaceChanged: (listener: (workspaceId: string) => void) => () => void;
 }
 
 declare global {

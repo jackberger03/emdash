@@ -125,25 +125,28 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
     }
   };
 
-  const loadDirectories = React.useCallback(async (path: string) => {
-    setIsLoadingDirs(true);
-    try {
-      const api = (window as any).electronAPI;
-      const result = await api.sshListDirectories({
-        config: { host, user, remotePath: path, port, keyPath },
-        path,
-      });
+  const loadDirectories = React.useCallback(
+    async (path: string) => {
+      setIsLoadingDirs(true);
+      try {
+        const api = (window as any).electronAPI;
+        const result = await api.sshListDirectories({
+          config: { host, user, remotePath: path, port, keyPath },
+          path,
+        });
 
-      if (result.success) {
-        setCurrentPath(result.currentPath || path);
-        setDirectories(result.directories || []);
+        if (result.success) {
+          setCurrentPath(result.currentPath || path);
+          setDirectories(result.directories || []);
+        }
+      } catch (error) {
+        console.error('Failed to load directories:', error);
+      } finally {
+        setIsLoadingDirs(false);
       }
-    } catch (error) {
-      console.error('Failed to load directories:', error);
-    } finally {
-      setIsLoadingDirs(false);
-    }
-  }, [host, user, port, keyPath]);
+    },
+    [host, user, port, keyPath]
+  );
 
   const navigateUp = async () => {
     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
@@ -161,7 +164,7 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
 
   const handleSave = () => {
     onSave({
-      enabled: true,  // Always enabled if we're in the dialog
+      enabled: true, // Always enabled if we're in the dialog
       host,
       user,
       remotePath,
@@ -191,9 +194,7 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
             {!isConnected && (
               <div className="space-y-4">
                 <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    SSH Connection
-                  </label>
+                  <label className="mb-1 block text-sm font-medium">SSH Connection</label>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -209,10 +210,7 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
                       disabled={isConnecting}
                       autoFocus
                     />
-                    <Button
-                      onClick={handleConnect}
-                      disabled={!connectionString || isConnecting}
-                    >
+                    <Button onClick={handleConnect} disabled={!connectionString || isConnecting}>
                       {isConnecting ? (
                         <>
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -238,8 +236,8 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
                 <Alert>
                   <AlertTitle>Note</AlertTitle>
                   <AlertDescription>
-                    Make sure your SSH key is configured and the remote server is accessible.
-                    The app will use your default SSH key automatically.
+                    Make sure your SSH key is configured and the remote server is accessible. The
+                    app will use your default SSH key automatically.
                   </AlertDescription>
                 </Alert>
               </div>
@@ -248,7 +246,7 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
             {/* Directory Browser */}
             {isConnected && (
               <div className="space-y-4">
-                <Alert variant="default" className="bg-green-500/10 border-green-500/20">
+                <Alert variant="default" className="border-green-500/20 bg-green-500/10">
                   <Check className="h-4 w-4 text-green-500" />
                   <AlertTitle className="text-green-500">Connected</AlertTitle>
                   <AlertDescription>
@@ -303,7 +301,7 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
                           <button
                             key={dir}
                             onClick={() => navigateToDirectory(dir)}
-                            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm hover:bg-muted/50 transition-colors"
+                            className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors hover:bg-muted/50"
                           >
                             <Folder className="h-4 w-4 text-blue-500" />
                             <span>{dir}</span>
@@ -335,10 +333,7 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button
-            onClick={handleSave}
-            disabled={!remotePath}
-          >
+          <Button onClick={handleSave} disabled={!remotePath}>
             Save Configuration
           </Button>
         </div>
