@@ -11,6 +11,7 @@ import PrStatusSkeleton from './ui/pr-status-skeleton';
 import FileTypeIcon from './ui/file-type-icon';
 import {
   Plus,
+  Minus,
   Undo2,
   RefreshCw,
   Check,
@@ -34,6 +35,7 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
   const [showDiffModal, setShowDiffModal] = useState(false);
   const [selectedPath, setSelectedPath] = useState<string | undefined>(undefined);
   const [stagingFiles, setStagingFiles] = useState<Set<string>>(new Set());
+  const [unstagingFiles, setUnstagingFiles] = useState<Set<string>>(new Set());
   const [revertingFiles, setRevertingFiles] = useState<Set<string>>(new Set());
   const [commitMessage, setCommitMessage] = useState('');
   const [isCommitting, setIsCommitting] = useState(false);
@@ -57,13 +59,16 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
   const hasStagedChanges = fileChanges.some((change) => change.isStaged);
   const { pr, loading: prLoading, refresh: refreshPr } = usePrStatus(workspaceId);
   const [branchAhead, setBranchAhead] = useState<number | null>(null);
+  const [branchBehind, setBranchBehind] = useState<number | null>(null);
   const [branchStatusLoading, setBranchStatusLoading] = useState<boolean>(false);
 
+  // Check branch status - now checks always to detect unpushed commits
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
-      if (!workspaceId || hasChanges) {
+      if (!workspaceId) {
         setBranchAhead(null);
+        setBranchBehind(null);
         return;
       }
       setBranchStatusLoading(true);
@@ -71,9 +76,13 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
         const res = await window.electronAPI.getBranchStatus({ workspacePath: workspaceId });
         if (!cancelled) {
           setBranchAhead(res?.success ? (res?.ahead ?? 0) : 0);
+          setBranchBehind(res?.success ? (res?.behind ?? 0) : 0);
         }
       } catch {
-        if (!cancelled) setBranchAhead(0);
+        if (!cancelled) {
+          setBranchAhead(0);
+          setBranchBehind(0);
+        }
       } finally {
         if (!cancelled) setBranchStatusLoading(false);
       }
@@ -119,9 +128,9 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
     }
   };
 
-  const handleRevertFile = async (filePath: string, event: React.MouseEvent) => {
+  const handleUnstageFile = async (filePath: string, event: React.MouseEvent) => {
     event.stopPropagation(); // Prevent opening diff modal
-    setRevertingFiles((prev) => new Set(prev).add(filePath));
+    setUnstagingFiles((prev) => new Set(prev).add(filePath));
 
     try {
       const result = await window.electronAPI.revertFile({
@@ -130,13 +139,66 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
       });
 
       if (result.success) {
-        const action = result.action;
-        if (action !== 'unstaged') {
+        await refreshChanges();
+      } else {
+        toast({
+          title: 'Unstage Failed',
+          description: result.error || 'Failed to unstage file.',
+          variant: 'destructive',
+        });
+      }
+    } catch (_error) {
+      toast({
+        title: 'Unstage Failed',
+        description: 'An unexpected error occurred.',
+        variant: 'destructive',
+      });
+    } finally {
+      setUnstagingFiles((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(filePath);
+        return newSet;
+      });
+    }
+  };
+
+  const handleRevertFile = async (filePath: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent opening diff modal
+
+    // Check if file is staged - if so, we need to unstage first then revert
+    const fileChange = fileChanges.find((f) => f.path === filePath);
+    const isFileStaged = fileChange?.isStaged || false;
+
+    setRevertingFiles((prev) => new Set(prev).add(filePath));
+
+    try {
+      // If staged, unstage first
+      if (isFileStaged) {
+        const unstageResult = await window.electronAPI.revertFile({
+          workspacePath: workspaceId,
+          filePath,
+        });
+        if (!unstageResult.success) {
           toast({
-            title: 'File Reverted',
-            description: `${filePath} changes have been reverted.`,
+            title: 'Revert Failed',
+            description: unstageResult.error || 'Failed to unstage file before reverting.',
+            variant: 'destructive',
           });
+          return;
         }
+      }
+
+      // Now revert the changes
+      const result = await window.electronAPI.revertFile({
+        workspacePath: workspaceId,
+        filePath,
+      });
+
+      if (result.success) {
+        toast({
+          title: 'File Reverted',
+          description: `${filePath} changes have been discarded.`,
+        });
         await refreshChanges();
       } else {
         toast({
@@ -261,6 +323,18 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
         });
         setCommitMessage('');
         await refreshChanges();
+        // Refresh branch status to show unpushed commits
+        try {
+          setBranchStatusLoading(true);
+          const bs = await window.electronAPI.getBranchStatus({ workspacePath: workspaceId });
+          setBranchAhead(bs?.success ? (bs?.ahead ?? 0) : 0);
+          setBranchBehind(bs?.success ? (bs?.behind ?? 0) : 0);
+        } catch {
+          setBranchAhead(0);
+          setBranchBehind(0);
+        } finally {
+          setBranchStatusLoading(false);
+        }
       } else {
         toast({
           title: 'Commit Failed',
@@ -293,6 +367,18 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
         try {
           await refreshPr();
         } catch {}
+        // Refresh branch status to clear the "ahead" count
+        try {
+          setBranchStatusLoading(true);
+          const bs = await window.electronAPI.getBranchStatus({ workspacePath: workspaceId });
+          setBranchAhead(bs?.success ? (bs?.ahead ?? 0) : 0);
+          setBranchBehind(bs?.success ? (bs?.behind ?? 0) : 0);
+        } catch {
+          setBranchAhead(0);
+          setBranchBehind(0);
+        } finally {
+          setBranchStatusLoading(false);
+        }
       } else {
         toast({
           title: 'Push Failed',
@@ -367,6 +453,18 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
         try {
           await refreshPr();
         } catch {}
+        // Refresh branch status after sync
+        try {
+          setBranchStatusLoading(true);
+          const bs = await window.electronAPI.getBranchStatus({ workspacePath: workspaceId });
+          setBranchAhead(bs?.success ? (bs?.ahead ?? 0) : 0);
+          setBranchBehind(bs?.success ? (bs?.behind ?? 0) : 0);
+        } catch {
+          setBranchAhead(0);
+          setBranchBehind(0);
+        } finally {
+          setBranchStatusLoading(false);
+        }
       } else {
         toast({
           title: 'Sync Failed',
@@ -509,7 +607,7 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
               </span>
             )}
             <div className="flex items-center gap-1">
-              {!isStaged && (
+              {!isStaged ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -524,6 +622,21 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
                     <Plus className="h-3 w-3" />
                   )}
                 </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
+                  onClick={(e) => handleUnstageFile(change.path, e)}
+                  disabled={unstagingFiles.has(change.path)}
+                  title="Unstage file"
+                >
+                  {unstagingFiles.has(change.path) ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <Minus className="h-3 w-3" />
+                  )}
+                </Button>
               )}
               <Button
                 variant="ghost"
@@ -531,7 +644,7 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
                 className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
                 onClick={(e) => handleRevertFile(change.path, e)}
                 disabled={revertingFiles.has(change.path)}
-                title={isStaged ? 'Unstage file (click again to revert)' : 'Revert changes to file'}
+                title="Discard changes to file"
               >
                 {revertingFiles.has(change.path) ? (
                   <Spinner size="sm" />
@@ -574,51 +687,63 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
         </div>
       </div>
 
-      {/* Commit Controls */}
-      {hasStagedChanges && (
+      {/* Commit Controls - show when there are staged changes OR unpushed commits */}
+      {(hasStagedChanges || (branchAhead !== null && branchAhead > 0)) && (
         <div className="border-b border-gray-200 bg-white px-3 py-2 dark:border-gray-700 dark:bg-gray-800">
-          <Input
-            placeholder="Commit message..."
-            value={commitMessage}
-            onChange={(e) => setCommitMessage(e.target.value)}
-            className="mb-2 h-8 text-sm"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.ctrlKey) {
-                e.preventDefault();
-                handleCommit();
-              }
-            }}
-          />
+          {hasStagedChanges ? (
+            <>
+              <Input
+                placeholder="Commit message..."
+                value={commitMessage}
+                onChange={(e) => setCommitMessage(e.target.value)}
+                className="mb-2 h-8 text-sm"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && e.ctrlKey) {
+                    e.preventDefault();
+                    handleCommit();
+                  }
+                }}
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 flex-1 text-xs"
+                  onClick={handleCommit}
+                  disabled={isCommitting || !commitMessage.trim()}
+                  title="Commit (Ctrl+Enter)"
+                >
+                  {isCommitting ? (
+                    <Spinner size="sm" />
+                  ) : (
+                    <>
+                      <Check className="mr-1 h-3 w-3" />
+                      Commit
+                    </>
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 text-xs"
+                  onClick={handleSync}
+                  disabled={isSyncing || !commitMessage.trim()}
+                  title="Commit and Sync (pull + push)"
+                >
+                  {isSyncing ? <Spinner size="sm" /> : <ArrowUpDown className="h-3 w-3" />}
+                </Button>
+              </div>
+            </>
+          ) : (
+            // Show sync status when commits are ahead
+            <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {branchAhead} commit{branchAhead !== 1 ? 's' : ''} ahead
+                {branchBehind !== null && branchBehind > 0 && <>, {branchBehind} behind</>}
+              </span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 flex-1 text-xs"
-              onClick={handleCommit}
-              disabled={isCommitting || !commitMessage.trim()}
-              title="Commit (Ctrl+Enter)"
-            >
-              {isCommitting ? (
-                <Spinner size="sm" />
-              ) : (
-                <>
-                  <Check className="mr-1 h-3 w-3" />
-                  Commit
-                </>
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 px-2 text-xs"
-              onClick={handleSync}
-              disabled={isSyncing || !commitMessage.trim()}
-              title="Commit and Sync (pull + push)"
-            >
-              {isSyncing ? <Spinner size="sm" /> : <ArrowUpDown className="h-3 w-3" />}
-            </Button>
-          </div>
-          <div className="mt-2 flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -652,6 +777,16 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
                   Push
                 </>
               )}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={handleSync}
+              disabled={isSyncing}
+              title="Sync (pull + push)"
+            >
+              {isSyncing ? <Spinner size="sm" /> : <ArrowUpDown className="h-3 w-3" />}
             </Button>
           </div>
         </div>
