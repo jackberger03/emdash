@@ -3,7 +3,6 @@ import { useToast } from '../hooks/use-toast';
 import { useTheme } from '../hooks/useTheme';
 import { ChatTerminal } from './ChatTerminal';
 import { TerminalModeBanner } from './TerminalModeBanner';
-import { WorkspaceNotice } from './WorkspaceNotice';
 import { providerMeta } from '../providers/meta';
 import MessageList from './MessageList';
 import ProviderBar from './ProviderBar';
@@ -13,6 +12,7 @@ import { useInitialPromptInjection } from '../hooks/useInitialPromptInjection';
 import { type Provider } from '../types';
 import { buildAttachmentsSection, buildImageAttachmentsSection } from '../lib/attachments';
 import { Workspace, Message } from '../types/chat';
+import { ProviderConfig } from '../types/connections';
 
 declare const window: Window & {
   electronAPI: {
@@ -36,6 +36,41 @@ interface Props {
   initialProvider?: Provider;
   paneId?: string; // Optional pane ID for split pane isolation
 }
+
+// Helper to build shell command with flags based on provider config
+const buildShellCommand = (providerId: Provider): string => {
+  const baseCli = providerMeta[providerId].cli;
+  if (!baseCli) return '';
+
+  try {
+    const saved = localStorage.getItem('emdash.providerConfig');
+    if (!saved) return baseCli;
+
+    const config: ProviderConfig = JSON.parse(saved);
+
+    // Map provider to their skip permissions flag
+    const flagMap: Record<string, string> = {
+      claude: '--dangerously-skip-permissions',
+      codex: '--yolo',
+      droid: '--skip-permissions-unsafe',
+      amp: '--dangerously-allow-all',
+    };
+
+    // Check if skip permissions is enabled for this provider
+    const providerConfig = config[providerId as keyof ProviderConfig];
+    if (providerConfig && (providerConfig as any)?.skipPermissions) {
+      const flag = flagMap[providerId];
+      if (flag) {
+        return `${baseCli} ${flag}`;
+      }
+    }
+
+    return baseCli;
+  } catch (err) {
+    console.error('Failed to build shell command:', err);
+    return baseCli;
+  }
+};
 
 const ChatInterface: React.FC<Props> = ({
   workspace,
@@ -518,11 +553,6 @@ const ChatInterface: React.FC<Props> = ({
               })()}
             </div>
           </div>
-          <div className="mt-2 px-6">
-            <div className="mx-auto max-w-4xl">
-              <WorkspaceNotice workspaceName={workspace.name} />
-            </div>
-          </div>
           <div className="mt-4 min-h-0 flex-1 px-6">
             <div
               className={`mx-auto h-full max-w-4xl overflow-hidden rounded-md ${
@@ -553,7 +583,7 @@ const ChatInterface: React.FC<Props> = ({
                     <ChatTerminal
                       id={`chat-${effectiveWorkspaceId}-${p}`}
                       cwd={workspace.path}
-                      shell={providerMeta[p].cli}
+                      shell={buildShellCommand(p)}
                       onActivity={() => {
                         try {
                           window.localStorage.setItem(`provider:locked:${effectiveWorkspaceId}`, p);

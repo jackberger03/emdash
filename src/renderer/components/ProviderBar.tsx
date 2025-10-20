@@ -126,12 +126,12 @@ export const ProviderBar: React.FC<Props> = ({
                 themeOverride={
                   effectiveTheme === 'lightsout'
                     ? {
-                        background: '#000000',
+                        background: '#0a0a0a',
                         foreground: '#f2f2f2',
                         cursor: '#f2f2f2',
                         selectionBackground: '#f2f2f233',
-                        // Lights out - pure black with white text
-                        black: '#000000',
+                        // Lights out - very dark with white text
+                        black: '#0a0a0a',
                         red: '#f2f2f2',
                         green: '#f2f2f2',
                         yellow: '#f2f2f2',
@@ -150,12 +150,12 @@ export const ProviderBar: React.FC<Props> = ({
                       }
                     : effectiveTheme === 'dark'
                       ? {
-                          background: '#1f2937',
+                          background: '#374151',
                           foreground: '#ffffff',
                           cursor: '#ffffff',
                           selectionBackground: '#ffffff33',
-                          // Keep ANSI backgrounds matching the dark theme background
-                          black: '#1f2937',
+                          // Lighter gray background to contrast with card padding
+                          black: '#374151',
                           red: '#ffffff',
                           green: '#ffffff',
                           yellow: '#ffffff',

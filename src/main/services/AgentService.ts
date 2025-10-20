@@ -16,6 +16,7 @@ export interface AgentStartOptions {
   worktreePath: string;
   message: string;
   conversationId?: string;
+  customCommands?: string;
 }
 
 export class AgentService extends EventEmitter {
@@ -65,11 +66,11 @@ export class AgentService extends EventEmitter {
   }
 
   async startStream(opts: AgentStartOptions): Promise<void> {
-    const { providerId, workspaceId, worktreePath, message, conversationId } = opts;
+    const { providerId, workspaceId, worktreePath, message, conversationId, customCommands } = opts;
 
     // If codex, delegate to codexService (and events are bridged in agent IPC setup)
     if (providerId === 'codex') {
-      await codexService.sendMessageStream(workspaceId, message, conversationId);
+      await codexService.sendMessageStream(workspaceId, message, conversationId, customCommands);
       return;
     }
 
@@ -117,15 +118,24 @@ export class AgentService extends EventEmitter {
           this.processes.set(k, abortHandle);
           (async () => {
             try {
+              // Check if bypass permissions is enabled
+              const bypassPermissions = customCommands?.includes('--dangerously-skip-permissions');
+
+              const queryOptions: any = {
+                cwd: worktreePath,
+                includePartialMessages: true,
+                permissionMode: bypassPermissions ? 'bypassPermissions' : 'acceptEdits',
+                abortController,
+              };
+
+              // Only add allowedTools if not bypassing permissions
+              if (!bypassPermissions) {
+                queryOptions.allowedTools = ['Edit', 'MultiEdit', 'Write', 'Read'];
+              }
+
               const q: AsyncGenerator<any, void> = cc.query({
                 prompt: message,
-                options: {
-                  cwd: worktreePath,
-                  includePartialMessages: true,
-                  permissionMode: 'acceptEdits',
-                  allowedTools: ['Edit', 'MultiEdit', 'Write', 'Read'],
-                  abortController,
-                },
+                options: queryOptions,
               });
               for await (const msg of q) {
                 try {
@@ -171,25 +181,28 @@ export class AgentService extends EventEmitter {
       }
 
       if (!usedSdk) {
-        // CLI fallback with streaming JSON and safe edit tools
-        const args = [
-          '-p',
-          message,
-          '--verbose',
-          '--output-format',
-          'stream-json',
-          // Some CLI versions do not support --include-partial-messages; omit for compatibility.
-          '--permission-mode',
-          'acceptEdits',
-          '--allowedTools',
-          'Edit',
-          '--allowedTools',
-          'MultiEdit',
-          '--allowedTools',
-          'Write',
-          '--allowedTools',
-          'Read',
-        ];
+        // CLI fallback with streaming JSON
+        const bypassPermissions = customCommands?.includes('--dangerously-skip-permissions');
+
+        const args = ['-p', message, '--verbose', '--output-format', 'stream-json'];
+
+        // When bypassing permissions, don't add any permission or allowedTools flags
+        if (bypassPermissions) {
+          args.push('--dangerously-skip-permissions');
+        } else {
+          // Only set permission-mode and allowedTools if not bypassing
+          args.push('--permission-mode', 'acceptEdits');
+          args.push(
+            '--allowedTools',
+            'Edit',
+            '--allowedTools',
+            'MultiEdit',
+            '--allowedTools',
+            'Write',
+            '--allowedTools',
+            'Read'
+          );
+        }
         const child = spawn('claude', args, {
           cwd: worktreePath,
           stdio: ['ignore', 'pipe', 'pipe'],

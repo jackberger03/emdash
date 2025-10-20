@@ -35,16 +35,17 @@ export class CodexService extends EventEmitter {
   private activeConversations: Map<string, string> = new Map();
 
   /**
-   * Resolve CLI args for Codex exec based on env vars.
+   * Resolve CLI args for Codex exec based on env vars and custom commands.
    *
    * - If CODEX_DANGEROUSLY_BYPASS (or CODEX_SANDBOX_MODE=danger-full-access)
    *   is set, prefer the unified `--dangerously-bypass-approvals-and-sandbox` flag.
    * - Otherwise, pass `--sandbox <mode>` and optionally `--approval <policy>`.
+   * - Custom commands from UI settings are inserted before the message.
    *
    * This keeps the default behavior safe (workspace-write) while enabling
    * power users to opt out explicitly.
    */
-  private buildCodexExecArgs(message: string): string[] {
+  private buildCodexExecArgs(message: string, customCommands?: string): string[] {
     const bypassEnv = (
       process.env.CODEX_DANGEROUSLY_BYPASS ||
       process.env.CODEX_DANGEROUSLY_BYPASS_APPROVALS_AND_SANDBOX ||
@@ -56,10 +57,19 @@ export class CodexService extends EventEmitter {
     const approvalEnv = (process.env.CODEX_APPROVAL_POLICY || '').trim().toLowerCase();
 
     const truthy = (v: string) => v === '1' || v === 'true' || v === 'yes' || v === 'y';
-    const bypass = truthy(bypassEnv) || sandboxEnv === 'danger-full-access';
+    const bypassFromEnv = truthy(bypassEnv) || sandboxEnv === 'danger-full-access';
+    const bypassFromCustom = customCommands?.includes('--yolo') || false;
+    const bypass = bypassFromEnv || bypassFromCustom;
 
     if (bypass) {
-      return ['exec', '--dangerously-bypass-approvals-and-sandbox', message];
+      const args = ['exec', '--yolo'];
+      // Don't re-add --yolo if it's already in customCommands
+      if (customCommands && customCommands.trim() && !customCommands.includes('--yolo')) {
+        const customArgs = customCommands.trim().split(/\s+/);
+        args.push(...customArgs);
+      }
+      args.push(message);
+      return args;
     }
 
     // sandbox mode fallback
@@ -82,6 +92,12 @@ export class CodexService extends EventEmitter {
       default:
         // ignore invalid/empty
         break;
+    }
+
+    // Add custom commands before message
+    if (customCommands && customCommands.trim()) {
+      const customArgs = customCommands.trim().split(/\s+/);
+      args.push(...customArgs);
     }
 
     args.push(message);
@@ -256,7 +272,8 @@ export class CodexService extends EventEmitter {
   public async sendMessageStream(
     workspaceId: string,
     message: string,
-    conversationId?: string
+    conversationId?: string,
+    customCommands?: string
   ): Promise<void> {
     // Find agent for this workspace
 
@@ -299,7 +316,7 @@ export class CodexService extends EventEmitter {
 
     try {
       // Spawn codex directly with args to avoid shell quoting issues (backticks, quotes, etc.)
-      const args = this.buildCodexExecArgs(message);
+      const args = this.buildCodexExecArgs(message, customCommands);
       log.info(
         `Executing: codex ${args.map((a) => (a.includes(' ') ? '"' + a + '"' : a)).join(' ')} in ${agent.worktreePath}`
       );

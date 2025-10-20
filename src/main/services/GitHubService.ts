@@ -366,4 +366,125 @@ export class GitHubService {
       return null;
     }
   }
+
+  /**
+   * Fetch initial list of GitHub issues for a project
+   */
+  async getIssues(projectPath: string, limit = 50): Promise<any[]> {
+    try {
+      const sanitizedLimit = Math.min(Math.max(limit, 1), 200);
+
+      const fields = [
+        'number',
+        'title',
+        'body',
+        'url',
+        'state',
+        'labels',
+        'assignees',
+        'milestone',
+        'updatedAt',
+      ];
+
+      const { stdout } = await execAsync(
+        `gh issue list --state open --limit ${sanitizedLimit} --json ${fields.join(',')}`,
+        { cwd: projectPath }
+      );
+
+      const issues = JSON.parse(stdout || '[]');
+
+      if (!Array.isArray(issues)) return [];
+
+      return issues.map((issue: any) => ({
+        id: issue.number,
+        number: issue.number,
+        title: issue.title || `Issue #${issue.number}`,
+        body: issue.body || null,
+        url: issue.url || null,
+        state: issue.state || 'open',
+        labels: issue.labels || [],
+        assignee: issue.assignees?.[0] || null,
+        assignees: issue.assignees || [],
+        milestone: issue.milestone || null,
+        updatedAt: issue.updatedAt || null,
+      }));
+    } catch (error) {
+      console.error('Failed to fetch GitHub issues:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Search GitHub issues by query string
+   */
+  async searchIssues(projectPath: string, searchTerm: string, limit = 20): Promise<any[]> {
+    try {
+      if (!searchTerm.trim()) {
+        return [];
+      }
+
+      const sanitizedLimit = Math.min(Math.max(limit, 1), 200);
+
+      const fields = [
+        'number',
+        'title',
+        'body',
+        'url',
+        'state',
+        'labels',
+        'assignees',
+        'milestone',
+        'updatedAt',
+      ];
+
+      // Get all open issues and filter locally
+      const { stdout } = await execAsync(
+        `gh issue list --state open --limit 100 --json ${fields.join(',')}`,
+        { cwd: projectPath }
+      );
+
+      const allIssues = JSON.parse(stdout || '[]');
+
+      if (!Array.isArray(allIssues)) return [];
+
+      // Filter locally by search term
+      const searchTermLower = searchTerm.trim().toLowerCase();
+      const filteredIssues = allIssues.filter((issue: any) => {
+        // Search in issue number
+        if (String(issue.number).includes(searchTerm)) {
+          return true;
+        }
+        // Search in title
+        if (issue.title?.toLowerCase().includes(searchTermLower)) {
+          return true;
+        }
+        // Search in assignee login
+        if (issue.assignees?.some((a: any) => a.login?.toLowerCase().includes(searchTermLower))) {
+          return true;
+        }
+        // Search in labels
+        if (issue.labels?.some((l: any) => l.name?.toLowerCase().includes(searchTermLower))) {
+          return true;
+        }
+        return false;
+      });
+
+      return filteredIssues.slice(0, sanitizedLimit).map((issue: any) => ({
+        id: issue.number,
+        number: issue.number,
+        title: issue.title || `Issue #${issue.number}`,
+        body: issue.body || null,
+        url: issue.url || null,
+        state: issue.state || 'open',
+        labels: issue.labels || [],
+        assignee: issue.assignees?.[0] || null,
+        assignees: issue.assignees || [],
+        milestone: issue.milestone || null,
+        updatedAt: issue.updatedAt || null,
+      }));
+    } catch (error) {
+      console.error('Failed to search GitHub issues:', error);
+      return [];
+    }
+  }
 }

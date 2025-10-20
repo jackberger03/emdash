@@ -155,74 +155,144 @@ export async function getPRBranchChanges(
   }
 
   try {
-    // Get list of changed files between base and HEAD
-    const { stdout: diffOutput } = await execFileAsync(
+    // First, get committed PR changes (from base to HEAD)
+    const { stdout: committedDiffOutput } = await execFileAsync(
       'git',
       ['diff', '--name-status', `origin/${baseBranch}...HEAD`],
       { cwd: workspacePath }
     );
 
-    if (!diffOutput.trim()) return [];
-
+    const committedFiles = new Set<string>();
     const changes: GitChange[] = [];
-    const diffLines = diffOutput
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
 
-    for (const line of diffLines) {
-      const parts = line.split('\t');
-      if (parts.length < 2) continue;
+    if (committedDiffOutput.trim()) {
+      const diffLines = committedDiffOutput
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
 
-      const statusCode = parts[0];
-      let filePath = parts[1];
+      for (const line of diffLines) {
+        const parts = line.split('\t');
+        if (parts.length < 2) continue;
 
-      // Handle renames
-      if (statusCode.startsWith('R') && parts.length >= 3) {
-        filePath = parts[2]; // Use the new name for renamed files
-      }
+        const statusCode = parts[0];
+        let filePath = parts[1];
 
-      let status = 'modified';
-      if (statusCode.startsWith('A')) status = 'added';
-      else if (statusCode.startsWith('D')) status = 'deleted';
-      else if (statusCode.startsWith('R')) status = 'renamed';
-      else if (statusCode.startsWith('M')) status = 'modified';
-
-      if (filePath.endsWith('codex-stream.log')) continue;
-
-      // Get numstat for additions/deletions
-      let additions = 0;
-      let deletions = 0;
-
-      try {
-        const { stdout: numstatOutput } = await execFileAsync(
-          'git',
-          ['diff', '--numstat', `origin/${baseBranch}...HEAD`, '--', filePath],
-          { cwd: workspacePath }
-        );
-
-        const numstatLines = numstatOutput
-          .trim()
-          .split('\n')
-          .filter((l) => l.trim().length > 0);
-
-        for (const l of numstatLines) {
-          const p = l.split('\t');
-          if (p.length >= 2) {
-            const addStr = p[0];
-            const delStr = p[1];
-            const a = addStr === '-' ? 0 : parseInt(addStr, 10) || 0;
-            const d = delStr === '-' ? 0 : parseInt(delStr, 10) || 0;
-            additions += a;
-            deletions += d;
-          }
+        // Handle renames
+        if (statusCode.startsWith('R') && parts.length >= 3) {
+          filePath = parts[2]; // Use the new name for renamed files
         }
-      } catch {
-        // Ignore numstat errors
-      }
 
-      // PR changes are not "staged" in the traditional sense
-      changes.push({ path: filePath, status, additions, deletions, isStaged: false });
+        let status = 'modified';
+        if (statusCode.startsWith('A')) status = 'added';
+        else if (statusCode.startsWith('D')) status = 'deleted';
+        else if (statusCode.startsWith('R')) status = 'renamed';
+        else if (statusCode.startsWith('M')) status = 'modified';
+
+        if (filePath.endsWith('codex-stream.log')) continue;
+
+        committedFiles.add(filePath);
+
+        // Get numstat for additions/deletions
+        let additions = 0;
+        let deletions = 0;
+
+        try {
+          const { stdout: numstatOutput } = await execFileAsync(
+            'git',
+            ['diff', '--numstat', `origin/${baseBranch}...HEAD`, '--', filePath],
+            { cwd: workspacePath }
+          );
+
+          const numstatLines = numstatOutput
+            .trim()
+            .split('\n')
+            .filter((l) => l.trim().length > 0);
+
+          for (const l of numstatLines) {
+            const p = l.split('\t');
+            if (p.length >= 2) {
+              const addStr = p[0];
+              const delStr = p[1];
+              const a = addStr === '-' ? 0 : parseInt(addStr, 10) || 0;
+              const d = delStr === '-' ? 0 : parseInt(delStr, 10) || 0;
+              additions += a;
+              deletions += d;
+            }
+          }
+        } catch {
+          // Ignore numstat errors
+        }
+
+        // Mark committed PR changes as "staged" to differentiate from local changes
+        changes.push({ path: filePath, status, additions, deletions, isStaged: true });
+      }
+    }
+
+    // Now get local uncommitted changes in working directory
+    const { stdout: statusOutput } = await execFileAsync('git', ['status', '--porcelain'], {
+      cwd: workspacePath,
+    });
+
+    if (statusOutput.trim()) {
+      const statusLines = statusOutput
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+
+      for (const line of statusLines) {
+        if (line.length < 3) continue;
+
+        const stagedCode = line[0];
+        const unstagedCode = line[1];
+        const filePath = line.substring(3);
+
+        if (filePath.endsWith('codex-stream.log')) continue;
+
+        // Skip if this file is already tracked as a committed change
+        if (committedFiles.has(filePath)) continue;
+
+        let status = 'modified';
+        const code = unstagedCode !== ' ' ? unstagedCode : stagedCode;
+
+        if (code === 'A' || code === '?') status = 'added';
+        else if (code === 'D') status = 'deleted';
+        else if (code === 'M') status = 'modified';
+
+        // Get numstat for local changes
+        let additions = 0;
+        let deletions = 0;
+
+        try {
+          const { stdout: numstatOutput } = await execFileAsync(
+            'git',
+            ['diff', '--numstat', 'HEAD', '--', filePath],
+            { cwd: workspacePath }
+          );
+
+          const numstatLines = numstatOutput
+            .trim()
+            .split('\n')
+            .filter((l) => l.trim().length > 0);
+
+          for (const l of numstatLines) {
+            const p = l.split('\t');
+            if (p.length >= 2) {
+              const addStr = p[0];
+              const delStr = p[1];
+              const a = addStr === '-' ? 0 : parseInt(addStr, 10) || 0;
+              const d = delStr === '-' ? 0 : parseInt(delStr, 10) || 0;
+              additions += a;
+              deletions += d;
+            }
+          }
+        } catch {
+          // Ignore numstat errors
+        }
+
+        // Mark local uncommitted changes as not staged
+        changes.push({ path: filePath, status, additions, deletions, isStaged: false });
+      }
     }
 
     return changes;

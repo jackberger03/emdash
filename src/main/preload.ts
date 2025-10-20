@@ -167,6 +167,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     branchName?: string;
   }) => ipcRenderer.invoke('github:createPullRequestWorktree', args),
   githubLogout: () => ipcRenderer.invoke('github:logout'),
+  githubGetIssues: (args: { projectPath: string; limit?: number }) =>
+    ipcRenderer.invoke('github:getIssues', args),
+  githubSearchIssues: (args: { projectPath: string; searchTerm: string; limit?: number }) =>
+    ipcRenderer.invoke('github:searchIssues', args),
   // Linear integration
   linearSaveToken: (token: string) => ipcRenderer.invoke('linear:saveToken', token),
   linearCheckConnection: () => ipcRenderer.invoke('linear:checkConnection'),
@@ -207,8 +211,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('codex:create-agent', workspaceId, worktreePath),
   codexSendMessage: (workspaceId: string, message: string) =>
     ipcRenderer.invoke('codex:send-message', workspaceId, message),
-  codexSendMessageStream: (workspaceId: string, message: string, conversationId?: string) =>
-    ipcRenderer.invoke('codex:send-message-stream', workspaceId, message, conversationId),
+  codexSendMessageStream: (
+    workspaceId: string,
+    message: string,
+    conversationId?: string,
+    customCommands?: string
+  ) =>
+    ipcRenderer.invoke(
+      'codex:send-message-stream',
+      workspaceId,
+      message,
+      conversationId,
+      customCommands
+    ),
   codexStopStream: (workspaceId: string) => ipcRenderer.invoke('codex:stop-stream', workspaceId),
   codexGetStreamTail: (workspaceId: string) =>
     ipcRenderer.invoke('codex:get-stream-tail', workspaceId),

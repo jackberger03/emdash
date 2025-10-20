@@ -37,6 +37,7 @@ export function registerAgentIpc() {
         worktreePath: string;
         message: string;
         conversationId?: string;
+        customCommands?: string;
       }
     ) => {
       try {

@@ -256,4 +256,45 @@ export function registerGithubIpc() {
       }
     }
   );
+
+  ipcMain.handle('github:getIssues', async (_, args: { projectPath: string; limit?: number }) => {
+    const { projectPath, limit } = args || ({} as typeof args);
+
+    if (!projectPath) {
+      return { success: false, error: 'Project path is required' };
+    }
+
+    try {
+      const issues = await githubService.getIssues(projectPath, limit);
+      return { success: true, issues };
+    } catch (error) {
+      log.error('Failed to fetch GitHub issues:', error);
+      const message = error instanceof Error ? error.message : 'Unable to fetch GitHub issues';
+      return { success: false, error: message };
+    }
+  });
+
+  ipcMain.handle(
+    'github:searchIssues',
+    async (_, args: { projectPath: string; searchTerm: string; limit?: number }) => {
+      const { projectPath, searchTerm, limit } = args || ({} as typeof args);
+
+      if (!projectPath) {
+        return { success: false, error: 'Project path is required' };
+      }
+
+      if (!searchTerm || typeof searchTerm !== 'string') {
+        return { success: false, error: 'Search term is required' };
+      }
+
+      try {
+        const issues = await githubService.searchIssues(projectPath, searchTerm, limit ?? 20);
+        return { success: true, issues };
+      } catch (error) {
+        log.error('Failed to search GitHub issues:', error);
+        const message = error instanceof Error ? error.message : 'Unable to search GitHub issues';
+        return { success: false, error: message };
+      }
+    }
+  );
 }

@@ -53,7 +53,7 @@ const ICON_BUTTON =
   'rounded-md p-1.5 text-muted-foreground transition hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background';
 
 const ICON_WRAPPER =
-  'flex h-6 w-6 items-center justify-center rounded-md bg-muted/40 text-muted-foreground';
+  'flex h-6 w-6 items-center justify-center rounded-md bg-muted/40 backdrop-blur-sm text-muted-foreground';
 
 const IntegrationRow: React.FC<IntegrationRowProps> = ({
   logoSrc,

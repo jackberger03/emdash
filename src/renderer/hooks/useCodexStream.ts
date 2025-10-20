@@ -34,7 +34,8 @@ declare const window: Window & {
     codexSendMessageStream: (
       workspaceId: string,
       message: string,
-      conversationId?: string
+      conversationId?: string,
+      customCommands?: string
     ) => Promise<any>;
     codexStopStream: (
       workspaceId: string
@@ -226,6 +227,21 @@ const useCodexStream = (options?: UseCodexStreamOptions | null): UseCodexStreamR
 
       appendMessage(userMessage);
 
+      // Read config options for codex from localStorage
+      let customCommands: string | undefined;
+      try {
+        const saved = localStorage.getItem('emdash.providerConfig');
+        if (saved) {
+          const config = JSON.parse(saved);
+          const codexConfig = config['codex'];
+          if (codexConfig?.skipPermissions) {
+            customCommands = '--yolo';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load provider config:', err);
+      }
+
       cancelledRef.current = false;
       resetStreamState();
       setIsStreaming(true);
@@ -235,7 +251,8 @@ const useCodexStream = (options?: UseCodexStreamOptions | null): UseCodexStreamR
         await window.electronAPI.codexSendMessageStream(
           normalizedOptions.workspaceId,
           `${text}${attachments ?? ''}`,
-          conversationIdRef.current ?? undefined
+          conversationIdRef.current ?? undefined,
+          customCommands
         );
         return { success: true };
       } catch (error) {

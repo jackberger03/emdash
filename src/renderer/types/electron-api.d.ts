@@ -303,6 +303,20 @@ declare global {
         error?: string;
       }>;
       githubLogout: () => Promise<void>;
+      githubGetIssues: (args: { projectPath: string; limit?: number }) => Promise<{
+        success: boolean;
+        issues?: any[];
+        error?: string;
+      }>;
+      githubSearchIssues: (args: {
+        projectPath: string;
+        searchTerm: string;
+        limit?: number;
+      }) => Promise<{
+        success: boolean;
+        issues?: any[];
+        error?: string;
+      }>;
       // Linear integration
       linearCheckConnection?: () => Promise<{
         connected: boolean;
@@ -642,6 +656,20 @@ export interface ElectronAPI {
     error?: string;
   }>;
   githubLogout: () => Promise<void>;
+  githubGetIssues: (args: { projectPath: string; limit?: number }) => Promise<{
+    success: boolean;
+    issues?: any[];
+    error?: string;
+  }>;
+  githubSearchIssues: (args: {
+    projectPath: string;
+    searchTerm: string;
+    limit?: number;
+  }) => Promise<{
+    success: boolean;
+    issues?: any[];
+    error?: string;
+  }>;
 
   // Linear integration
   linearCheckConnection?: () => Promise<{

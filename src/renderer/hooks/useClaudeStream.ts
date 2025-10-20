@@ -91,6 +91,21 @@ const useClaudeStream = (options?: Options | null): Result => {
       } catch {}
       appendMessage(userMessage);
 
+      // Read config options for claude from localStorage
+      let customCommands: string | undefined;
+      try {
+        const saved = localStorage.getItem('emdash.providerConfig');
+        if (saved) {
+          const config = JSON.parse(saved);
+          const claudeConfig = config['claude'];
+          if (claudeConfig?.skipPermissions) {
+            customCommands = '--dangerously-skip-permissions';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load provider config:', err);
+      }
+
       setIsStreaming(true);
       setSeconds(0);
       bufferRef.current = '';
@@ -103,6 +118,7 @@ const useClaudeStream = (options?: Options | null): Result => {
           worktreePath: normalized.workspacePath,
           message: `${text}${attachments ?? ''}`,
           conversationId: convoId,
+          customCommands,
         });
         return { success: true };
       } catch (e: any) {

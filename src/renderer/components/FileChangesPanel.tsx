@@ -607,51 +607,55 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
               </span>
             )}
             <div className="flex items-center gap-1">
-              {!isStaged ? (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
-                  onClick={(e) => handleStageFile(change.path, e)}
-                  disabled={stagingFiles.has(change.path)}
-                  title="Stage file for commit"
-                >
-                  {stagingFiles.has(change.path) ? (
-                    <Spinner size="sm" />
+              {!isPRWorkspace && (
+                <>
+                  {!isStaged ? (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
+                      onClick={(e) => handleStageFile(change.path, e)}
+                      disabled={stagingFiles.has(change.path)}
+                      title="Stage file for commit"
+                    >
+                      {stagingFiles.has(change.path) ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <Plus className="h-3 w-3" />
+                      )}
+                    </Button>
                   ) : (
-                    <Plus className="h-3 w-3" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
+                      onClick={(e) => handleUnstageFile(change.path, e)}
+                      disabled={unstagingFiles.has(change.path)}
+                      title="Unstage file"
+                    >
+                      {unstagingFiles.has(change.path) ? (
+                        <Spinner size="sm" />
+                      ) : (
+                        <Minus className="h-3 w-3" />
+                      )}
+                    </Button>
                   )}
-                </Button>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
-                  onClick={(e) => handleUnstageFile(change.path, e)}
-                  disabled={unstagingFiles.has(change.path)}
-                  title="Unstage file"
-                >
-                  {unstagingFiles.has(change.path) ? (
-                    <Spinner size="sm" />
-                  ) : (
-                    <Minus className="h-3 w-3" />
-                  )}
-                </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
+                    onClick={(e) => handleRevertFile(change.path, e)}
+                    disabled={revertingFiles.has(change.path)}
+                    title="Discard changes to file"
+                  >
+                    {revertingFiles.has(change.path) ? (
+                      <Spinner size="sm" />
+                    ) : (
+                      <Undo2 className="h-3 w-3" />
+                    )}
+                  </Button>
+                </>
               )}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-gray-500 hover:bg-gray-50 hover:text-gray-600 dark:hover:bg-gray-900/20 dark:hover:text-gray-400"
-                onClick={(e) => handleRevertFile(change.path, e)}
-                disabled={revertingFiles.has(change.path)}
-                title="Discard changes to file"
-              >
-                {revertingFiles.has(change.path) ? (
-                  <Spinner size="sm" />
-                ) : (
-                  <Undo2 className="h-3 w-3" />
-                )}
-              </Button>
             </div>
           </div>
         </div>
@@ -836,45 +840,53 @@ const FileChangesPanelComponent: React.FC<FileChangesPanelProps> = ({
 
       {/* File Lists */}
       <div className="min-h-0 flex-1 overflow-y-auto">
-        {/* Staged Changes */}
+        {/* Staged/Committed Changes */}
         {stagedChanges.length > 0 && (
           <div>
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-900">
               <span className="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">
-                Staged Changes ({stagedChanges.length})
+                {isPRWorkspace
+                  ? `Committed Changes (${stagedChanges.length})`
+                  : `Staged Changes (${stagedChanges.length})`}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 px-2 text-xs"
-                onClick={handleUnstageAll}
-                disabled={isUnstaging}
-                title="Unstage all files"
-              >
-                {isUnstaging ? <Spinner size="sm" /> : 'Unstage All'}
-              </Button>
+              {!isPRWorkspace && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-2 text-xs"
+                  onClick={handleUnstageAll}
+                  disabled={isUnstaging}
+                  title="Unstage all files"
+                >
+                  {isUnstaging ? <Spinner size="sm" /> : 'Unstage All'}
+                </Button>
+              )}
             </div>
             {renderFileList(stagedChanges, true)}
           </div>
         )}
 
-        {/* Unstaged Changes */}
+        {/* Unstaged/Uncommitted Changes */}
         {unstagedChanges.length > 0 && (
           <div>
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-gray-50 px-3 py-1.5 dark:border-gray-700 dark:bg-gray-900">
               <span className="text-xs font-medium uppercase tracking-wide text-gray-600 dark:text-gray-400">
-                Changes ({unstagedChanges.length})
+                {isPRWorkspace
+                  ? `Uncommitted Changes (${unstagedChanges.length})`
+                  : `Changes (${unstagedChanges.length})`}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-5 px-2 text-xs"
-                onClick={handleStageAll}
-                disabled={isStaging}
-                title="Stage all files"
-              >
-                {isStaging ? <Spinner size="sm" /> : 'Stage All'}
-              </Button>
+              {!isPRWorkspace && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-5 px-2 text-xs"
+                  onClick={handleStageAll}
+                  disabled={isStaging}
+                  title="Stage all files"
+                >
+                  {isStaging ? <Spinner size="sm" /> : 'Stage All'}
+                </Button>
+              )}
             </div>
             {renderFileList(unstagedChanges, false)}
           </div>

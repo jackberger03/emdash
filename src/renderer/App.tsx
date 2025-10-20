@@ -68,6 +68,70 @@ const SidebarHotkeys: React.FC = () => {
   return null;
 };
 
+const LeftSidebarHoverTrigger: React.FC = () => {
+  const { open, setOpen } = useSidebar();
+  const [isHoveringTrigger, setIsHoveringTrigger] = useState(false);
+  const [isHoveringSidebar, setIsHoveringSidebar] = useState(false);
+  const [isPinned, setIsPinned] = useState(false);
+  const openedByHoverRef = useRef(false);
+  const prevOpenRef = useRef(open);
+
+  // Detect manual toggle (keyboard shortcut or button)
+  useEffect(() => {
+    const wasOpen = prevOpenRef.current;
+    const isOpen = open;
+
+    // Manual toggle detected - pin it
+    if (wasOpen !== isOpen && !openedByHoverRef.current) {
+      setIsPinned(true);
+      openedByHoverRef.current = false;
+    }
+
+    prevOpenRef.current = isOpen;
+  }, [open]);
+
+  // Auto-expand when hovering trigger zone (only if not pinned)
+  useEffect(() => {
+    if (isHoveringTrigger && !open && !isPinned) {
+      openedByHoverRef.current = true;
+      setIsPinned(false);
+      setOpen(true);
+    }
+  }, [isHoveringTrigger, open, isPinned, setOpen]);
+
+  // Auto-collapse when leaving (only if opened by hover and not pinned)
+  useEffect(() => {
+    if (!isHoveringTrigger && !isHoveringSidebar && open && openedByHoverRef.current && !isPinned) {
+      const timeout = setTimeout(() => {
+        if (!isHoveringTrigger && !isHoveringSidebar && openedByHoverRef.current && !isPinned) {
+          openedByHoverRef.current = false;
+          setOpen(false);
+        }
+      }, 800);
+      return () => clearTimeout(timeout);
+    }
+  }, [isHoveringTrigger, isHoveringSidebar, open, isPinned, setOpen]);
+
+  return (
+    <>
+      {/* Hover trigger zone - invisible strip on left edge */}
+      <div
+        className="fixed left-0 top-[var(--tb)] z-40 h-[calc(100vh-var(--tb))] w-2"
+        onMouseEnter={() => setIsHoveringTrigger(true)}
+        onMouseLeave={() => setIsHoveringTrigger(false)}
+      />
+      {/* Sidebar hover detection zone */}
+      {open && (
+        <div
+          className="fixed left-0 top-[var(--tb)] z-30 h-[calc(100vh-var(--tb))] w-64"
+          onMouseEnter={() => setIsHoveringSidebar(true)}
+          onMouseLeave={() => setIsHoveringSidebar(false)}
+        />
+      )}
+    </>
+  );
+};
+
 const RightSidebarBridge: React.FC<{
   onCollapsedChange: (collapsed: boolean) => void;
   setCollapsedRef: React.MutableRefObject<((next: boolean) => void) | null>;
@@ -1214,6 +1278,7 @@ const AppContent: React.FC = () => {
             setCollapsedRef={rightSidebarSetCollapsedRef}
           />
           <SidebarHotkeys />
+          <LeftSidebarHoverTrigger />
           <Titlebar onToggleSettings={handleToggleSettings} isSettingsOpen={showSettings} />
           <div className="flex flex-1 overflow-hidden pt-[var(--tb)]">
             <ResizablePanelGroup

@@ -27,11 +27,22 @@ export function startPty(options: {
 }): IPty {
   const { id, cwd, shell, env, cols = 80, rows = 24 } = options;
 
-  const useShell = shell || getDefaultShell();
+  const shellInput = shell || getDefaultShell();
   const useCwd = cwd || process.cwd() || os.homedir();
   const useEnv = { TERM: 'xterm-256color', ...process.env, ...(env || {}) };
 
-  const proc = pty.spawn(useShell, [], {
+  // Parse shell command and arguments
+  // Split on spaces but respect quoted strings
+  let useShell = shellInput;
+  let args: string[] = [];
+
+  if (shellInput.includes(' ')) {
+    const parts = shellInput.match(/(?:[^\s"]+|"[^"]*")+/g) || [shellInput];
+    useShell = parts[0];
+    args = parts.slice(1).map((arg) => arg.replace(/^"(.*)"$/, '$1'));
+  }
+
+  const proc = pty.spawn(useShell, args, {
     name: 'xterm-256color',
     cols,
     rows,

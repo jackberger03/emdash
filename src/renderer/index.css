@@ -168,14 +168,26 @@
   .lights-out .bg-gray-50 {
     background-color: #0f0f0f;
   }
+  .lights-out .bg-gray-50\/95 {
+    background-color: rgba(15, 15, 15, 0.95);
+  }
   .lights-out .bg-gray-100 {
     background-color: #141414;
+  }
+  .lights-out .bg-gray-700 {
+    background-color: #1a1a1a;
   }
   .lights-out .bg-gray-800 {
     background-color: #0a0a0a;
   }
   .lights-out .bg-gray-900 {
     background-color: #000000;
+  }
+  .lights-out .bg-gray-900\/80 {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  .lights-out .bg-gray-900\/40 {
+    background-color: rgba(10, 10, 10, 0.4);
   }
   .lights-out .border-gray-100 {
     border-color: #1a1a1a;
@@ -213,6 +225,21 @@
   }
   .lights-out .hover\:bg-gray-800:hover {
     background-color: #0a0a0a;
+  }
+
+  /* Frosted background for provider icons in lights-out mode */
+  .lights-out .bg-muted\/40 {
+    background-color: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Frosted button backgrounds for lights-out mode */
+  .lights-out button[class*='bg-primary'] {
+    background-color: rgba(255, 255, 255, 0.12) !important;
+    backdrop-filter: blur(8px);
+    color: #f2f2f2 !important;
+  }
+  .lights-out button[class*='bg-primary']:hover {
+    background-color: rgba(255, 255, 255, 0.18) !important;
   }
 
   /* Override blue accent colors for lights-out mode to maintain visibility */
@@ -286,13 +313,25 @@
 
   /* Status badge colors for lights-out */
   .lights-out .bg-blue-100 {
-    background-color: #1e3a5f;
+    background-color: #1a1a2e;
+  }
+  .lights-out .bg-blue-900\/30 {
+    background-color: rgba(15, 15, 26, 0.5);
   }
   .lights-out .text-blue-700 {
-    color: #93c5fd;
+    color: #6b9eff;
   }
   .lights-out .text-blue-300 {
     color: #93c5fd;
+  }
+  .lights-out .border-blue-500 {
+    border-color: #3b4a66;
+  }
+  .lights-out .border-blue-600 {
+    border-color: #4a5a7a;
+  }
+  .lights-out .hover\:bg-blue-500:hover {
+    background-color: #2a3a52;
   }
   .lights-out .bg-emerald-100 {
     background-color: #0f3d2a;
@@ -322,6 +361,18 @@
     color: #fca5a5;
   }
   .lights-out .text-rose-400 {
+    color: #fca5a5;
+  }
+  .lights-out .text-green-600 {
+    color: #6ee7b7;
+  }
+  .lights-out .text-green-400 {
+    color: #6ee7b7;
+  }
+  .lights-out .text-red-600 {
+    color: #fca5a5;
+  }
+  .lights-out .text-red-400 {
     color: #fca5a5;
   }
   .lights-out .text-gray-700 {
