@@ -103,23 +103,47 @@ const VersionCard: React.FC = () => {
           </Button>
         ) : null}
 
-        {update.status === 'error' ? (
-          <div className="flex items-start gap-3">
-            <div className="inline-flex items-start gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 shadow-sm">
-              <div className="flex flex-col">
-                <span className="text-xs font-medium text-foreground">
-                  Updater unavailable — download manually
-                </span>
-                {update.message && (
-                  <span className="text-xs text-muted-foreground">{update.message}</span>
-                )}
-              </div>
-            </div>
-            <Button size="sm" variant="outline" onClick={openLatest} className="self-start">
-              Get latest DMG
-            </Button>
-          </div>
-        ) : null}
+        {update.status === 'error'
+          ? (() => {
+              const msg = update.message || '';
+              const urlMatch = msg.match(/https?:\/\/\S+/);
+              const manualUrl = urlMatch ? urlMatch[0].replace(/[\]\)\}\,\.]+$/, '') : '';
+              return (
+                <div className="flex items-start gap-3">
+                  <div className="inline-flex max-w-[520px] items-start gap-2 rounded-lg border border-border/60 bg-muted/40 px-3 py-2 shadow-sm">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs font-medium text-foreground">
+                        Updater unavailable — download manually
+                      </span>
+                      {manualUrl ? (
+                        <button
+                          type="button"
+                          className="text-left text-xs text-primary underline underline-offset-2"
+                          onClick={() => window.electronAPI.openExternal(manualUrl)}
+                          title={manualUrl}
+                        >
+                          Open exact download link
+                        </button>
+                      ) : null}
+                      {update.message && (
+                        <details className="mt-1">
+                          <summary className="cursor-pointer text-xs text-muted-foreground">
+                            Details
+                          </summary>
+                          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap break-words rounded bg-background/60 p-2 text-[11px] text-muted-foreground">
+                            {update.message}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={openLatest} className="self-start">
+                    Get latest for your platform
+                  </Button>
+                </div>
+              );
+            })()
+          : null}
       </div>
 
       {/* Notify user on manual check when already up to date */}

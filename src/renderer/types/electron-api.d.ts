@@ -208,6 +208,10 @@ declare global {
         title: string;
         body: string;
       }) => Promise<{ success: boolean; error?: string }>;
+      openIn: (args: {
+        app: 'finder' | 'cursor' | 'vscode' | 'terminal';
+        path: string;
+      }) => Promise<{ success: boolean; error?: string }>;
       connectToGitHub: (projectPath: string) => Promise<{
         success: boolean;
         repository?: string;

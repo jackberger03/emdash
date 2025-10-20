@@ -30,6 +30,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => handlers.forEach((off) => off());
   },
 
+  // Open a path in a specific app
+  openIn: (args: { app: 'finder' | 'cursor' | 'vscode' | 'terminal'; path: string }) =>
+    ipcRenderer.invoke('app:openIn', args),
+
   // PTY management
   ptyStart: (opts: {
     id: string;

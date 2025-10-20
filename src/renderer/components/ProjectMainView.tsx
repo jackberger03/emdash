@@ -18,6 +18,7 @@ import SSHConfigModal from './SSHConfigModal';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import type { Provider } from '../types';
 import { type Workspace, type WorkspaceMetadata } from '../types/chat';
+import ProjectDeleteButton from './ProjectDeleteButton';
 
 interface Project {
   id: string;
@@ -373,13 +374,11 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                   </BreadcrumbList>
                 </Breadcrumb>
               </div>
-              <button
-                onClick={() => onDeleteProject(project)}
-                className="flex items-center gap-2 rounded-full bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 backdrop-blur-sm transition-all hover:bg-red-500/20 dark:text-red-400"
-              >
-                <Trash className="size-4" />
-                Delete Project
-              </button>
+              <ProjectDeleteButton
+                projectName={project.name}
+                onConfirm={() => onDeleteProject(project)}
+                className="inline-flex items-center justify-center rounded p-2 text-muted-foreground hover:text-destructive"
+              />
             </header>
             <Separator className="my-2" />
           </div>
