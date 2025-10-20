@@ -250,25 +250,7 @@ const ChatInterface: React.FC<Props> = ({
               }
             });
 
-            // Only add welcome message if there's no initial prompt and no messages at all
-            if (!hasInitialPrompt && messagesResult.messages.length === 0) {
-              const welcomeMessage: Message = {
-                id: `welcome-${Date.now()}`,
-                content: `Hello! You're working in workspace **${workspace.name}**. What can the agent do for you?`,
-                sender: 'agent',
-                timestamp: new Date(),
-              };
-
-              await window.electronAPI.saveMessage({
-                id: welcomeMessage.id,
-                conversationId: convoId,
-                content: welcomeMessage.content,
-                sender: welcomeMessage.sender,
-                metadata: JSON.stringify({ isWelcome: true }),
-              });
-
-              codexStream.appendMessage(welcomeMessage);
-            }
+            // No welcome message needed
           }
         } catch (error) {
           console.error('Failed to check for welcome message:', error);

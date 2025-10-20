@@ -135,34 +135,63 @@ export const ChangesDiffModal: React.FC<ChangesDiffModalProps> = ({
             }
             className="flex h-[82vh] w-[92vw] transform-gpu overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl will-change-transform dark:border-gray-700 dark:bg-gray-800"
           >
-            <div className="w-72 overflow-y-auto border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
-              <div className="px-3 py-2 text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">
-                Changed Files
+            <div className="w-80 overflow-y-auto border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900/40">
+              <div className="border-b border-gray-200 px-4 py-3 dark:border-gray-700">
+                <div className="text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-400">
+                  Changed Files
+                </div>
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-500">
+                  {files.length} {files.length === 1 ? 'file' : 'files'}
+                </div>
               </div>
-              {files.map((f) => (
-                <button
-                  key={f.path}
-                  className={`w-full border-b border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-700 ${
-                    selected === f.path
-                      ? 'bg-gray-100 text-gray-900 dark:bg-gray-700 dark:text-gray-100'
-                      : 'text-gray-700 dark:text-gray-300'
-                  }`}
-                  onClick={() => setSelected(f.path)}
-                >
-                  <div className="truncate font-medium">{f.path}</div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    {f.status} • +{f.additions} / -{f.deletions}
-                  </div>
-                </button>
-              ))}
+              {files.map((f) => {
+                const statusColor =
+                  f.status === 'modified'
+                    ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300'
+                    : f.status === 'added'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300'
+                      : f.status === 'deleted'
+                        ? 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300'
+                        : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300';
+
+                return (
+                  <button
+                    key={f.path}
+                    className={`w-full border-b border-gray-200 px-4 py-3 text-left transition-colors hover:bg-gray-100 dark:border-gray-800 dark:hover:bg-gray-800/60 ${
+                      selected === f.path ? 'bg-gray-100 dark:bg-gray-800/60' : 'bg-transparent'
+                    }`}
+                    onClick={() => setSelected(f.path)}
+                  >
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span
+                        className={`rounded px-1.5 py-0.5 text-[10px] font-semibold uppercase ${statusColor}`}
+                      >
+                        {f.status.charAt(0)}
+                      </span>
+                      <div className="min-w-0 flex-1 truncate font-mono text-xs font-medium text-gray-900 dark:text-gray-100">
+                        {f.path}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 text-[11px]">
+                      <span className="text-emerald-600 dark:text-emerald-400">+{f.additions}</span>
+                      <span className="text-rose-600 dark:text-rose-400">-{f.deletions}</span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
 
             <div className="flex min-w-0 flex-1 flex-col">
-              <div className="flex items-center justify-between border-b border-gray-200 bg-white/80 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/50">
-                <div className="truncate text-sm text-gray-700 dark:text-gray-200">{selected}</div>
+              <div className="flex items-center justify-between border-b border-gray-200 bg-gray-50/95 px-4 py-3 backdrop-blur-sm dark:border-gray-700 dark:bg-gray-900/80">
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+                    {selected}
+                  </div>
+                </div>
                 <button
                   onClick={onClose}
-                  className="rounded-md p-1 text-gray-600 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800"
+                  className="ml-3 rounded-md p-1.5 text-gray-600 transition-colors hover:bg-gray-200 dark:text-gray-400 dark:hover:bg-gray-800"
+                  aria-label="Close"
                 >
                   <X className="h-4 w-4" />
                 </button>

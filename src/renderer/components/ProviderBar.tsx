@@ -16,6 +16,7 @@ import opencodeLogo from '../../assets/images/opencode.png';
 import charmLogo from '../../assets/images/charm.png';
 import qwenLogo from '../../assets/images/qwen.png';
 import augmentLogo from '../../assets/images/augmentcode.png';
+import { useTheme } from './ThemeProvider';
 
 type Props = {
   provider: Provider;
@@ -41,6 +42,7 @@ export const ProviderBar: React.FC<Props> = ({
   const [showDropdown, setShowDropdown] = useState(false);
   const [showTerminal, setShowTerminal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { effectiveTheme } = useTheme();
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -117,10 +119,61 @@ export const ProviderBar: React.FC<Props> = ({
               <TerminalPane
                 id={`${workspaceId}-provider-terminal`}
                 cwd={workspacePath}
-                variant={theme}
+                variant={effectiveTheme === 'light' ? 'light' : 'dark'}
                 className="h-full w-full"
                 rows={10}
                 keepAlive={true}
+                themeOverride={
+                  effectiveTheme === 'lightsout'
+                    ? {
+                        background: '#000000',
+                        foreground: '#f2f2f2',
+                        cursor: '#f2f2f2',
+                        selectionBackground: '#f2f2f233',
+                        // Lights out - pure black with white text
+                        black: '#000000',
+                        red: '#f2f2f2',
+                        green: '#f2f2f2',
+                        yellow: '#f2f2f2',
+                        blue: '#f2f2f2',
+                        magenta: '#f2f2f2',
+                        cyan: '#f2f2f2',
+                        white: '#f2f2f2',
+                        brightBlack: '#f2f2f2',
+                        brightRed: '#f2f2f2',
+                        brightGreen: '#f2f2f2',
+                        brightYellow: '#f2f2f2',
+                        brightBlue: '#f2f2f2',
+                        brightMagenta: '#f2f2f2',
+                        brightCyan: '#f2f2f2',
+                        brightWhite: '#f2f2f2',
+                      }
+                    : effectiveTheme === 'dark'
+                      ? {
+                          background: '#1f2937',
+                          foreground: '#ffffff',
+                          cursor: '#ffffff',
+                          selectionBackground: '#ffffff33',
+                          // Keep ANSI backgrounds matching the dark theme background
+                          black: '#1f2937',
+                          red: '#ffffff',
+                          green: '#ffffff',
+                          yellow: '#ffffff',
+                          blue: '#ffffff',
+                          magenta: '#ffffff',
+                          cyan: '#ffffff',
+                          white: '#ffffff',
+                          brightBlack: '#ffffff',
+                          brightRed: '#ffffff',
+                          brightGreen: '#ffffff',
+                          brightYellow: '#ffffff',
+                          brightBlue: '#ffffff',
+                          brightMagenta: '#ffffff',
+                          brightCyan: '#ffffff',
+                          brightWhite: '#ffffff',
+                        }
+                      : undefined
+                }
               />
             </div>
           )}

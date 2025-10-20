@@ -1,4 +1,12 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+  useRef,
+  useEffect,
+} from 'react';
 
 interface TerminalState {
   workspaceId: string;
@@ -30,33 +38,36 @@ interface Props {
 export const TerminalRegistryProvider: React.FC<Props> = ({ children }) => {
   // Store terminal states by workspace ID
   const [terminalStates, setTerminalStates] = useState<Map<string, TerminalState>>(new Map());
+  const statesRef = useRef(terminalStates);
 
-  const getTerminalState = useCallback(
-    (workspaceId: string): TerminalState => {
-      const existing = terminalStates.get(workspaceId);
-      if (existing) {
-        return existing;
-      }
+  // Keep ref in sync with state
+  useEffect(() => {
+    statesRef.current = terminalStates;
+  }, [terminalStates]);
 
-      // Create default state for new workspace
-      const defaultState: TerminalState = {
-        workspaceId,
-        tabs: [{ id: '1', label: 'Terminal 1' }],
-        activeTabId: '1',
-        isCollapsed: false,
-      };
+  const getTerminalState = useCallback((workspaceId: string): TerminalState => {
+    const existing = statesRef.current.get(workspaceId);
+    if (existing) {
+      return existing;
+    }
 
-      // Store it
-      setTerminalStates((prev) => {
-        const next = new Map(prev);
-        next.set(workspaceId, defaultState);
-        return next;
-      });
+    // Create default state for new workspace
+    const defaultState: TerminalState = {
+      workspaceId,
+      tabs: [{ id: '1', label: 'Terminal 1' }],
+      activeTabId: '1',
+      isCollapsed: false,
+    };
 
-      return defaultState;
-    },
-    [terminalStates]
-  );
+    // Store it
+    setTerminalStates((prev) => {
+      const next = new Map(prev);
+      next.set(workspaceId, defaultState);
+      return next;
+    });
+
+    return defaultState;
+  }, []);
 
   const updateTerminalState = useCallback(
     (workspaceId: string, updates: Partial<TerminalState>) => {
@@ -68,9 +79,9 @@ export const TerminalRegistryProvider: React.FC<Props> = ({ children }) => {
           // If no state exists, create it with updates
           const newState: TerminalState = {
             workspaceId,
-            tabs: updates.tabs || [{ id: '1', label: 'Terminal 1' }],
-            activeTabId: updates.activeTabId || '1',
-            isCollapsed: updates.isCollapsed || false,
+            tabs: updates.tabs ?? [{ id: '1', label: 'Terminal 1' }],
+            activeTabId: updates.activeTabId ?? '1',
+            isCollapsed: updates.isCollapsed ?? false,
           };
           next.set(workspaceId, newState);
         } else {
@@ -85,8 +96,8 @@ export const TerminalRegistryProvider: React.FC<Props> = ({ children }) => {
   );
 
   const getAllWorkspaceIds = useCallback(() => {
-    return Array.from(terminalStates.keys());
-  }, [terminalStates]);
+    return Array.from(statesRef.current.keys());
+  }, []);
 
   return (
     <TerminalRegistryContext.Provider
