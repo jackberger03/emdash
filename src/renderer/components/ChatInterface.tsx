@@ -548,8 +548,8 @@ const ChatInterface: React.FC<Props> = ({
                   ? effectiveTheme === 'lightsout'
                     ? 'bg-black'
                     : effectiveTheme === 'light'
-                    ? 'bg-white'
-                    : 'bg-gray-800'
+                      ? 'bg-white'
+                      : 'bg-gray-800'
                   : ''
               }`}
             >
@@ -595,8 +595,8 @@ const ChatInterface: React.FC<Props> = ({
                         effectiveTheme === 'lightsout'
                           ? { background: '#000000' }
                           : p === 'charm'
-                          ? { background: effectiveTheme === 'dark' ? '#1f2937' : '#ffffff' }
-                          : undefined
+                            ? { background: effectiveTheme === 'dark' ? '#1f2937' : '#ffffff' }
+                            : undefined
                       }
                       contentFilter={
                         p === 'charm' && effectiveTheme === 'light'

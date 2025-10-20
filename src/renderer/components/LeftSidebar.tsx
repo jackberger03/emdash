@@ -141,7 +141,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
                       aria-label="Home"
                       className="justify-start"
                     >
-                      <Home className="h-5 w-5 text-gray-600 dark:text-gray-400 sm:h-4 sm:w-4" />
+                      <Home className="h-5 w-5 text-gray-600 sm:h-4 sm:w-4 dark:text-gray-400" />
                       <span className="hidden text-sm font-medium sm:inline">Home</span>
                     </Button>
                   </SidebarMenuButton>
@@ -275,7 +275,7 @@ const LeftSidebar: React.FC<LeftSidebarProps> = ({
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="border-t border-gray-200 px-2 py-2 dark:border-gray-800 sm:px-4 sm:py-4">
+        <SidebarFooter className="border-t border-gray-200 px-2 py-2 sm:px-4 sm:py-4 dark:border-gray-800">
           <SidebarMenu className="w-full">
             <SidebarMenuItem>
               <SidebarMenuButton

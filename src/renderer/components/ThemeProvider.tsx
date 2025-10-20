@@ -54,7 +54,8 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    const newEffectiveTheme = theme === 'system' ? getSystemTheme() : (theme as 'light' | 'dark' | 'lightsout');
+    const newEffectiveTheme =
+      theme === 'system' ? getSystemTheme() : (theme as 'light' | 'dark' | 'lightsout');
     setEffectiveTheme(newEffectiveTheme);
     applyTheme(theme);
 

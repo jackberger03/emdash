@@ -191,31 +191,31 @@ const WorkspaceTerminalPanelComponent: React.FC<Props> = ({ workspace, className
                     variant={effectiveTheme === 'light' ? 'light' : 'dark'}
                     keepAlive={true}
                     themeOverride={
-                        effectiveTheme === 'lightsout'
-                          ? {
-                              background: '#000000',
-                              foreground: '#f2f2f2',
-                              cursor: '#f2f2f2',
-                              selectionBackground: '#f2f2f233',
-                              // Lights out - pure black with white text
-                              black: '#000000',
-                              red: '#f2f2f2',
-                              green: '#f2f2f2',
-                              yellow: '#f2f2f2',
-                              blue: '#f2f2f2',
-                              magenta: '#f2f2f2',
-                              cyan: '#f2f2f2',
-                              white: '#f2f2f2',
-                              brightBlack: '#f2f2f2',
-                              brightRed: '#f2f2f2',
-                              brightGreen: '#f2f2f2',
-                              brightYellow: '#f2f2f2',
-                              brightBlue: '#f2f2f2',
-                              brightMagenta: '#f2f2f2',
-                              brightCyan: '#f2f2f2',
-                              brightWhite: '#f2f2f2',
-                            }
-                          : effectiveTheme === 'dark'
+                      effectiveTheme === 'lightsout'
+                        ? {
+                            background: '#000000',
+                            foreground: '#f2f2f2',
+                            cursor: '#f2f2f2',
+                            selectionBackground: '#f2f2f233',
+                            // Lights out - pure black with white text
+                            black: '#000000',
+                            red: '#f2f2f2',
+                            green: '#f2f2f2',
+                            yellow: '#f2f2f2',
+                            blue: '#f2f2f2',
+                            magenta: '#f2f2f2',
+                            cyan: '#f2f2f2',
+                            white: '#f2f2f2',
+                            brightBlack: '#f2f2f2',
+                            brightRed: '#f2f2f2',
+                            brightGreen: '#f2f2f2',
+                            brightYellow: '#f2f2f2',
+                            brightBlue: '#f2f2f2',
+                            brightMagenta: '#f2f2f2',
+                            brightCyan: '#f2f2f2',
+                            brightWhite: '#f2f2f2',
+                          }
+                        : effectiveTheme === 'dark'
                           ? {
                               background: '#1f2937',
                               foreground: '#ffffff',
@@ -262,14 +262,14 @@ const WorkspaceTerminalPanelComponent: React.FC<Props> = ({ workspace, className
                               brightCyan: '#000000',
                               brightWhite: '#000000',
                             }
-                      }
-                      className="h-full w-full"
-                    />
-                  </div>
-                ))}
-              </>
-            );
-          })()}
+                    }
+                    className="h-full w-full"
+                  />
+                </div>
+              ))}
+            </>
+          );
+        })()}
       </div>
     </div>
   );

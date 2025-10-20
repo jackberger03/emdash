@@ -298,7 +298,11 @@ export const ProviderBar: React.FC<Props> = ({
               {/* Folder and Branch Info */}
               {(folderName || branch) && (
                 <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-400">
-                  {folderName && <span className="max-w-[200px] truncate font-medium" title={folderName}>{folderName}</span>}
+                  {folderName && (
+                    <span className="max-w-[200px] truncate font-medium" title={folderName}>
+                      {folderName}
+                    </span>
+                  )}
                   {folderName && branch && <span className="flex-shrink-0">•</span>}
                   {branch && (
                     <span className="flex items-center gap-1">
