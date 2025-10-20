@@ -160,22 +160,22 @@ export function startPty(options: {
     const remoteShellEscaped = remoteShellCommand.replace(/'/g, "'\\''");
     const remoteDirEscaped = remotePath.replace(/'/g, "'\\''");
 
-    const remoteScriptParts = [
-      `__EMDASH_SOCKET=\"${remoteSocketPath}\"`,
-      `__EMDASH_SESSION=\"${session}\"`,
+    // Build the remote script as a single-line command with proper variable expansion
+    const remoteScript = [
+      `__EMDASH_SOCKET="${remoteSocketPath}"`,
+      `__EMDASH_SESSION="${session}"`,
       `__EMDASH_DIR='${remoteDirEscaped}'`,
-      `__EMDASH_CONF=\"${remoteSocketDir}/tmux.conf\"`,
-      'if command -v tmux >/dev/null 2>&1; then',
-      '  mkdir -p "$(dirname \\"$__EMDASH_SOCKET\\")"',
-      '  if [ ! -f "$__EMDASH_CONF" ]; then printf %s\\\\n "set-option -g status off" "set-option -g set-titles on" "set-option -g mouse off" > "$__EMDASH_CONF"; fi',
-      `  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" ${remoteShellEscaped}`,
-      '  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" attach-session -t "$__EMDASH_SESSION"',
-      'else',
-      `  cd "$__EMDASH_DIR" && exec ${remoteShellEscaped}`,
-      'fi',
-    ];
-    const remoteScript = remoteScriptParts.join('\n');
-    const remoteCommand = `bash -lc ${JSON.stringify(remoteScript)}`;
+      `__EMDASH_CONF="${remoteSocketDir}/tmux.conf"`,
+      `if command -v tmux >/dev/null 2>&1`,
+      `then mkdir -p "$(dirname "$__EMDASH_SOCKET")"`,
+      `&& if [ ! -f "$__EMDASH_CONF" ]; then printf '%s\\n' "set-option -g status off" "set-option -g set-titles on" "set-option -g mouse off" > "$__EMDASH_CONF"; fi`,
+      `&& { tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" ${remoteShellEscaped}; }`,
+      `&& tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" attach-session -t "$__EMDASH_SESSION"`,
+      `else cd "$__EMDASH_DIR" && exec ${remoteShellEscaped}`,
+      `fi`,
+    ].join(' ');
+
+    const remoteCommand = `bash -lc '${remoteScript.replace(/'/g, "'\\''")}'`;
 
     args = [
       '-i',
