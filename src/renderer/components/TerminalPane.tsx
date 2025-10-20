@@ -283,20 +283,6 @@ const TerminalPaneComponent: React.FC<Props> = ({
         if (res?.ok) {
           console.log('[TerminalPane] PTY started successfully:', id);
 
-          // Inject minimal prompt command after shell starts
-          // Small delay to ensure shell is ready
-          setTimeout(() => {
-            // Get first 4 characters of directory name for prompt
-            let dirPrefix = '';
-            if (cwd) {
-              const dirName = cwd.split('/').filter(Boolean).pop() || '';
-              dirPrefix = dirName.slice(0, 4);
-            }
-            // Set prompt for both zsh (PROMPT) and bash (PS1)
-            const promptCmd = `PROMPT="${dirPrefix}> "; PS1="${dirPrefix}> "; clear\n`;
-            window.electronAPI.ptyInput({ id, data: promptCmd });
-          }, 150);
-
           try {
             onStartSuccess && onStartSuccess();
           } catch {}
