@@ -159,15 +159,16 @@ export function startPty(options: {
     const remoteShellCommand = (shell || '$SHELL -i -l').trim();
     const remoteDirEscaped = remotePath.replace(/'/g, "'\\''");
 
-    let remoteCommandQuoted: string;
+    // Escape single quotes for use inside the outer single-quoted remote script
+    let remoteCommandEscaped: string;
     if (shell) {
       const parsedRemote = parseCommand(remoteShellCommand);
       const tokens = [parsedRemote.command, ...parsedRemote.args];
-      remoteCommandQuoted = tokens
-        .map((token) => `'${token.replace(/'/g, "'\\''")}'`)
+      remoteCommandEscaped = tokens
+        .map((token) => token.replace(/'/g, "'\\''"))
         .join(' ');
     } else {
-      remoteCommandQuoted = '"$SHELL" -i -l';
+      remoteCommandEscaped = '$SHELL -i -l';
     }
 
     const remoteScriptParts = [
@@ -178,10 +179,10 @@ export function startPty(options: {
       'if command -v tmux >/dev/null 2>&1; then',
       '  mkdir -p "$(dirname \"$__EMDASH_SOCKET\")"',
       '  if [ ! -f "$__EMDASH_CONF" ]; then printf %s\\n "set-option -g status off" "set-option -g set-titles on" "set-option -g mouse off" > "$__EMDASH_CONF"; fi',
-      `  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" -- ${remoteCommandQuoted}`,
+      `  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" ${remoteCommandEscaped}`,
       '  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" attach-session -t "$__EMDASH_SESSION"',
       'else',
-      `  cd "$__EMDASH_DIR" && exec ${remoteCommandQuoted}`,
+      `  cd "$__EMDASH_DIR" && exec ${remoteCommandEscaped}`,
       'fi',
     ];
     const remoteScript = remoteScriptParts.join(' ; ');
