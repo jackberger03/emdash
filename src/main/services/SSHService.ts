@@ -40,13 +40,18 @@ export class SSHService {
       });
 
       try {
-        const keyPath = config.keyPath || join(homedir(), '.ssh', 'id_rsa');
+        const keyPath = config.keyPath || this.getDefaultKeyPath();
 
         if (!existsSync(keyPath)) {
           clearTimeout(timeout);
+          const availableKeys = this.listAvailableKeys();
+          const keysMsg =
+            availableKeys.length > 0
+              ? ` Available keys: ${availableKeys.join(', ')}`
+              : ' No SSH keys found in ~/.ssh/';
           resolve({
             success: false,
-            error: `SSH key not found at ${keyPath}. Please configure your SSH key path.`
+            error: `SSH key not found at ${keyPath}.${keysMsg} Please configure your SSH key path.`,
           });
           return;
         }
@@ -113,12 +118,17 @@ export class SSHService {
       });
 
       try {
-        const keyPath = config.keyPath || join(homedir(), '.ssh', 'id_rsa');
+        const keyPath = config.keyPath || this.getDefaultKeyPath();
 
         if (!existsSync(keyPath)) {
+          const availableKeys = this.listAvailableKeys();
+          const keysMsg =
+            availableKeys.length > 0
+              ? ` Available keys: ${availableKeys.join(', ')}`
+              : ' No SSH keys found in ~/.ssh/';
           resolve({
             success: false,
-            error: `SSH key not found at ${keyPath}. Please configure your SSH key path.`
+            error: `SSH key not found at ${keyPath}.${keysMsg} Please configure your SSH key path.`,
           });
           return;
         }
@@ -156,10 +166,22 @@ export class SSHService {
   }
 
   /**
-   * Get the default SSH key path
+   * Get the default SSH key path by searching for common key types
    */
   getDefaultKeyPath(): string {
-    return join(homedir(), '.ssh', 'id_rsa');
+    const sshDir = join(homedir(), '.ssh');
+    const commonKeys = ['id_ed25519', 'id_ecdsa', 'id_rsa', 'id_dsa'];
+
+    // Try to find the first existing key
+    for (const keyName of commonKeys) {
+      const keyPath = join(sshDir, keyName);
+      if (existsSync(keyPath)) {
+        return keyPath;
+      }
+    }
+
+    // Default to id_ed25519 if none found (most modern)
+    return join(sshDir, 'id_ed25519');
   }
 
   /**
