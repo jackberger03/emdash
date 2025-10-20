@@ -1,5 +1,13 @@
 import { ipcMain, WebContents } from 'electron';
-import { startPty, writePty, resizePty, killPty, getPty, SSHConfig } from './ptyManager';
+import {
+  startPty,
+  writePty,
+  resizePty,
+  killPty,
+  getPty,
+  cleanAllTmuxSessions,
+  SSHConfig,
+} from './ptyManager';
 import { log } from '../lib/logger';
 
 const owners = new Map<string, WebContents>();
@@ -123,6 +131,22 @@ export function registerPtyIpc(): void {
       buffers.delete(args.id);
     } catch (e) {
       log.error('pty:kill error', e);
+    }
+  });
+
+  ipcMain.handle('pty:clean-all-tmux', async () => {
+    try {
+      log.info('Cleaning all tmux sessions...');
+      const result = cleanAllTmuxSessions();
+      log.info('Tmux cleanup completed', { cleaned: result.cleaned, errors: result.errors });
+      return result;
+    } catch (e: any) {
+      log.error('pty:clean-all-tmux error', e);
+      return {
+        success: false,
+        cleaned: 0,
+        errors: [e?.message || String(e)],
+      };
     }
   });
 }

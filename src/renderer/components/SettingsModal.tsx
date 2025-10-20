@@ -11,6 +11,7 @@ import TelemetryCard from './TelemetryCard';
 import ThemeCard from './ThemeCard';
 import HotkeyCard from './HotkeyCard';
 import OpenRouterCard from './OpenRouterCard';
+import TmuxCleanupCard from './TmuxCleanupCard';
 import { CliProviderStatus } from '../types/connections';
 import { Separator } from './ui/separator';
 
@@ -111,6 +112,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose }) => {
           { title: 'Version', render: () => <VersionCard /> },
           { title: 'Theme', render: () => <ThemeCard /> },
           { title: 'Keyboard Shortcuts', render: () => <HotkeyCard /> },
+          { title: 'Terminal Sessions', render: () => <TmuxCleanupCard /> },
         ],
       },
       connections: {
