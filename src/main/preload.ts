@@ -215,6 +215,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     };
     command: string;
   }) => ipcRenderer.invoke('ssh:executeCommand', args),
+  sshListDirectories: (args: {
+    config: {
+      host: string;
+      user: string;
+      remotePath: string;
+      port?: number;
+      keyPath?: string;
+    };
+    path?: string;
+  }) => ipcRenderer.invoke('ssh:listDirectories', args),
 
   // Linear integration
   linearSaveToken: (token: string) => ipcRenderer.invoke('linear:saveToken', token),

@@ -175,13 +175,22 @@ export class SSHService {
     // Get the absolute path and list directories (including hidden ones)
     const command = `cd ${path} && pwd && ls -1ap | grep '/$' | sed 's|/$||' | grep -v '^\\.$' | sort`;
 
+    log.info('SSH listDirectories command:', command);
     const result = await this.executeCommand('temp', { ...config, remotePath: path }, command);
+
+    log.info('SSH listDirectories result:', {
+      success: result.success,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    });
 
     if (!result.success) {
       return { success: false, error: result.error };
     }
 
     const lines = result.stdout?.split('\n').filter((l) => l.trim()) || [];
+    log.info('SSH listDirectories parsed lines:', lines);
+
     if (lines.length === 0) {
       return { success: false, error: 'No output from remote command' };
     }
@@ -189,6 +198,7 @@ export class SSHService {
     const currentPath = lines[0]; // First line is pwd output
     const directories = lines.slice(1).filter((d) => d && d !== '.' && d !== '..'); // Rest are directory names
 
+    log.info('SSH listDirectories final result:', { currentPath, directories });
     return { success: true, currentPath, directories };
   }
 
