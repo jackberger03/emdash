@@ -389,6 +389,16 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [splitPane, closePane, balanceAllPanes]);
 
+  // Helper to get a stable key for any node
+  const getNodeKey = (node: PaneNode): string => {
+    if (node.type === 'chat') {
+      return node.id;
+    } else {
+      // For split nodes, generate key from child IDs
+      return node.children.map(getNodeKey).join('-');
+    }
+  };
+
   const renderNode = (node: PaneNode, parentKey: string = 'root'): React.ReactElement => {
     if (node.type === 'chat') {
       return (
@@ -435,16 +445,19 @@ export const SplitChatPane: React.FC<SplitChatPaneProps> = ({
             }
           }}
         >
-          {node.children.map((child, index) => (
-            <React.Fragment key={`${groupId}-panel-${index}`}>
-              <ResizablePanel defaultSize={equalSize} minSize={10}>
-                {renderNode(child, `${groupId}-child${index}`)}
-              </ResizablePanel>
-              {index < node.children.length - 1 && (
-                <ResizableHandle withHandle className="bg-border hover:bg-blue-500" />
-              )}
-            </React.Fragment>
-          ))}
+          {node.children.map((child, index) => {
+            const childKey = getNodeKey(child);
+            return (
+              <React.Fragment key={childKey}>
+                <ResizablePanel defaultSize={equalSize} minSize={10}>
+                  {renderNode(child, `${groupId}-child${index}`)}
+                </ResizablePanel>
+                {index < node.children.length - 1 && (
+                  <ResizableHandle withHandle className="bg-border hover:bg-blue-500" />
+                )}
+              </React.Fragment>
+            );
+          })}
         </ResizablePanelGroup>
       );
     }
