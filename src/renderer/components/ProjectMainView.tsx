@@ -160,6 +160,21 @@ interface ProjectMainViewProps {
   ) => Promise<{ success: boolean; error?: string }>;
 }
 
+// Calculate contrast color for label text
+const getContrastColor = (hexColor: string): string => {
+  // Convert hex to RGB
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+
+  // Calculate relative luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // Return black for light backgrounds, white for dark backgrounds
+  return luminance > 0.5 ? '#000000' : '#ffffff';
+};
+
 const ProjectMainView: React.FC<ProjectMainViewProps> = ({
   project,
   onCreateWorkspace,
@@ -451,20 +466,24 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                               <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                                 {issue.labels && issue.labels.length > 0 && (
                                   <div className="flex items-center gap-1">
-                                    {issue.labels.slice(0, 3).map((label: any, idx: number) => (
-                                      <span
-                                        key={idx}
-                                        className="rounded-full px-2 py-0.5 text-[10px]"
-                                        style={{
-                                          backgroundColor: label.color
-                                            ? `#${label.color}`
-                                            : '#gray',
-                                          color: '#fff',
-                                        }}
-                                      >
-                                        {label.name}
-                                      </span>
-                                    ))}
+                                    {issue.labels.slice(0, 3).map((label: any, idx: number) => {
+                                      const hexColor = label.color ? `#${label.color}` : '#6b7280';
+                                      const textColor = getContrastColor(hexColor);
+                                      return (
+                                        <span
+                                          key={idx}
+                                          className="rounded-full px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm border"
+                                          style={{
+                                            backgroundColor: `${hexColor}20`,
+                                            borderColor: `${hexColor}40`,
+                                            color: textColor,
+                                            opacity: 0.8,
+                                          }}
+                                        >
+                                          {label.name}
+                                        </span>
+                                      );
+                                    })}
                                     {issue.labels.length > 3 && (
                                       <span className="text-[10px]">
                                         +{issue.labels.length - 3} more

@@ -7,6 +7,21 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Loader2, X, ExternalLink, MessageSquare } from 'lucide-react';
 import githubLogo from '../../assets/images/github.png';
 
+// Calculate contrast color for label text
+const getContrastColor = (hexColor: string): string => {
+  // Convert hex to RGB
+  const hex = hexColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+
+  // Calculate relative luminance
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+  // Return black for light backgrounds, white for dark backgrounds
+  return luminance > 0.5 ? '#000000' : '#ffffff';
+};
+
 interface GitHubDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -193,18 +208,24 @@ export const GitHubDetailModal: React.FC<GitHubDetailModalProps> = ({
               {/* Labels */}
               {detail.labels && detail.labels.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {detail.labels.map((label: any, idx: number) => (
-                    <span
-                      key={idx}
-                      className="rounded-full px-2 py-0.5 text-xs"
-                      style={{
-                        backgroundColor: label.color ? `#${label.color}` : '#gray',
-                        color: '#fff',
-                      }}
-                    >
-                      {label.name}
-                    </span>
-                  ))}
+                  {detail.labels.map((label: any, idx: number) => {
+                    const hexColor = label.color ? `#${label.color}` : '#6b7280';
+                    const textColor = getContrastColor(hexColor);
+                    return (
+                      <span
+                        key={idx}
+                        className="rounded-full px-3 py-1 text-xs font-medium backdrop-blur-sm border"
+                        style={{
+                          backgroundColor: `${hexColor}20`,
+                          borderColor: `${hexColor}40`,
+                          color: textColor,
+                          opacity: 0.8,
+                        }}
+                      >
+                        {label.name}
+                      </span>
+                    );
+                  })}
                 </div>
               )}
 
