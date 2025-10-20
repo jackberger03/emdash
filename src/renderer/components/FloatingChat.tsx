@@ -219,6 +219,7 @@ const FloatingChatContent: React.FC = () => {
             workspace={workspace}
             projectName={workspace.name}
             className="h-full"
+            paneId={`${workspace.id}-chat-0`}
             compact={true}
           />
         </ErrorBoundary>

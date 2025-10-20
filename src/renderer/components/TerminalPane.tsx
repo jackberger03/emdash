@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useCallback } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { log } from '../lib/logger';
 
@@ -44,6 +44,34 @@ const TerminalPaneComponent: React.FC<Props> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const termRef = useRef<Terminal | null>(null);
   const disposeFns = useRef<Array<() => void>>([]);
+  const selectionDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastCopiedSelectionRef = useRef<string>('');
+
+  const copySelection = useCallback(async () => {
+    const term = termRef.current;
+    if (!term) return;
+    const selection = term.getSelection();
+    if (!selection) return;
+    if (selection === lastCopiedSelectionRef.current) return;
+
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(selection);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = selection;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+      }
+      lastCopiedSelectionRef.current = selection;
+    } catch (error) {
+      log.debug('TerminalPane copy failed', error);
+    }
+  }, []);
 
   useEffect(() => {
     console.log('[TerminalPane] useEffect START:', { id, cwd, shell, keepAlive });
@@ -173,6 +201,14 @@ const TerminalPaneComponent: React.FC<Props> = ({
     const offData = window.electronAPI.onPtyData(id, (data) => {
       term.write(sanitizeEchoArtifacts(data));
     });
+    const selectionDisp = term.onSelectionChange(() => {
+      if (selectionDebounceRef.current) {
+        clearTimeout(selectionDebounceRef.current);
+      }
+      selectionDebounceRef.current = setTimeout(() => {
+        copySelection();
+      }, 80);
+    });
     const offExit = window.electronAPI.onPtyExit(id, (info) => {
       try {
         // If the process exits very quickly after start, it's likely the CLI wasn't found
@@ -212,6 +248,7 @@ const TerminalPaneComponent: React.FC<Props> = ({
     if (offHistory) disposeFns.current.push(offHistory);
     disposeFns.current.push(offData);
     disposeFns.current.push(offExit);
+    disposeFns.current.push(() => selectionDisp.dispose());
     disposeFns.current.push(() => keyDisp2.dispose());
     disposeFns.current.push(() => resizeObserver.disconnect());
 
@@ -283,9 +320,13 @@ const TerminalPaneComponent: React.FC<Props> = ({
       disposeFns.current.forEach((fn) => fn());
       term.dispose();
       termRef.current = null;
+      if (selectionDebounceRef.current) {
+        clearTimeout(selectionDebounceRef.current);
+        selectionDebounceRef.current = null;
+      }
       console.log('[TerminalPane] Cleanup END:', id);
     };
-  }, [id, cwd, cols, rows, variant, keepAlive, shell]);
+  }, [id, cwd, cols, rows, variant, keepAlive, shell, copySelection]);
 
   return (
     <div

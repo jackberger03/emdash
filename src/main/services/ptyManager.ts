@@ -86,10 +86,8 @@ function ensureSocketDir(): { dir: string; configPath: string } {
   }
 
   const configPath = join(dir, 'tmux.conf');
-  if (!existsSync(configPath)) {
-    const lines = [`set-option -g status off`, `set-option -g set-titles on`, `set-option -g mouse on`];
-    writeFileSync(configPath, lines.join('\n'), { encoding: 'utf8' });
-  }
+  const lines = [`set-option -g status off`, `set-option -g set-titles on`, `set-option -g mouse off`];
+  writeFileSync(configPath, lines.join('\n'), { encoding: 'utf8' });
 
   return { dir, configPath };
 }
