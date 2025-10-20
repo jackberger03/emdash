@@ -92,10 +92,14 @@ function WorkspaceRow({
       role="button"
       tabIndex={0}
       className={[
-        'group flex items-start justify-between gap-3 rounded-xl border border-border bg-background',
-        'px-4 py-3 transition-all hover:bg-muted/40 hover:shadow-sm',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
-        active ? 'ring-2 ring-primary' : '',
+        'group flex items-start justify-between gap-3 rounded-2xl',
+        'bg-white/40 dark:bg-white/5 backdrop-blur-xl',
+        'border border-white/20 dark:border-white/10',
+        'px-5 py-4 transition-all duration-300',
+        'hover:bg-white/60 dark:hover:bg-white/10 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20',
+        'hover:scale-[1.01] hover:-translate-y-0.5',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+        active ? 'ring-2 ring-primary/50 shadow-lg shadow-primary/10' : '',
       ].join(' ')}
     >
       <div className="min-w-0">
@@ -256,7 +260,41 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
           <div className="mb-8 space-y-2">
             <header className="flex items-start justify-between">
               <div className="space-y-2">
-                <h1 className="text-3xl font-semibold tracking-tight">{project.name}</h1>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-3xl font-semibold tracking-tight">{project.name}</h1>
+                  <div className="flex items-center gap-2 rounded-full bg-muted p-1">
+                    <button
+                      onClick={() => setActiveTab('workspaces')}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                        activeTab === 'workspaces'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Workspaces
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('issues')}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                        activeTab === 'issues'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Issues
+                    </button>
+                    <button
+                      onClick={() => setActiveTab('pull-requests')}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+                        activeTab === 'pull-requests'
+                          ? 'bg-background text-foreground shadow-sm'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      Pull Requests
+                    </button>
+                  </div>
+                </div>
 
                 <Breadcrumb className="text-muted-foreground">
                   <BreadcrumbList>
@@ -276,44 +314,48 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                   </BreadcrumbList>
                 </Breadcrumb>
               </div>
-              <Button variant="destructive" size="sm" onClick={() => onDeleteProject(project)}>
-                <Trash className="mr-2 size-4" />
+              <button
+                onClick={() => onDeleteProject(project)}
+                className="flex items-center gap-2 rounded-full bg-red-500/10 px-4 py-2 text-sm font-medium text-red-600 backdrop-blur-sm transition-all hover:bg-red-500/20 dark:text-red-400"
+              >
+                <Trash className="size-4" />
                 Delete Project
-              </Button>
+              </button>
             </header>
             <Separator className="my-2" />
           </div>
 
           <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-4xl">
-            <TabsList>
-              <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
-              <TabsTrigger value="issues">Issues</TabsTrigger>
-              <TabsTrigger value="pull-requests">Pull Requests</TabsTrigger>
-            </TabsList>
+            <div className="hidden">
+              <TabsList>
+                <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
+                <TabsTrigger value="issues">Issues</TabsTrigger>
+                <TabsTrigger value="pull-requests">Pull Requests</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="workspaces" className="space-y-6">
               <div className="space-y-3">
                 <div className="flex items-center justify-start gap-3">
                   <h2 className="text-lg font-semibold">Workspaces</h2>
-                  <Button
-                    variant="secondary"
-                    size="sm"
+                  <button
                     onClick={onCreateWorkspace}
                     disabled={isCreatingWorkspace}
                     aria-busy={isCreatingWorkspace}
+                    className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isCreatingWorkspace ? (
                       <>
-                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        <Loader2 className="size-4 animate-spin" />
                         Creating…
                       </>
                     ) : (
                       <>
-                        <Plus className="mr-2 size-4" />
+                        <Plus className="size-4" />
                         Create workspace
                       </>
                     )}
-                  </Button>
+                  </button>
                 </div>
                 <div className="flex flex-col gap-3">
                   {(project.workspaces ?? []).map((ws) => (
@@ -346,15 +388,14 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-start gap-3">
                     <h2 className="text-lg font-semibold">Issues</h2>
-                    <Button
-                      variant="secondary"
-                      size="sm"
+                    <button
                       onClick={() => loadIssues()}
                       disabled={issuesLoading}
+                      className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <RefreshCw className={`mr-2 size-4 ${issuesLoading ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`size-4 ${issuesLoading ? 'animate-spin' : ''}`} />
                       Refresh
-                    </Button>
+                    </button>
                   </div>
 
                   <div className="space-y-3">
@@ -386,7 +427,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                         {issues.map((issue) => (
                           <div
                             key={issue.id}
-                            className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 transition-all hover:bg-muted/40"
+                            className="flex cursor-pointer items-start justify-between gap-3 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 px-5 py-4 transition-all duration-300 hover:bg-white/60 dark:hover:bg-white/10 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:scale-[1.01] hover:-translate-y-0.5"
                             onClick={() => {
                               setDetailModalType('issue');
                               setDetailModalNumber(issue.number);
@@ -458,15 +499,14 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                 <div className="space-y-3">
                   <div className="flex items-center justify-start gap-3">
                     <h2 className="text-lg font-semibold">Pull Requests</h2>
-                    <Button
-                      variant="secondary"
-                      size="sm"
+                    <button
                       onClick={() => refreshPrs()}
                       disabled={prsLoading}
+                      className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      <RefreshCw className={`mr-2 size-4 ${prsLoading ? 'animate-spin' : ''}`} />
+                      <RefreshCw className={`size-4 ${prsLoading ? 'animate-spin' : ''}`} />
                       Refresh
-                    </Button>
+                    </button>
                   </div>
 
                   <div className="space-y-3">
@@ -500,7 +540,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                           return (
                             <div
                               key={pr.number}
-                              className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 transition-all hover:bg-muted/40"
+                              className="flex cursor-pointer items-start justify-between gap-3 rounded-2xl bg-white/40 dark:bg-white/5 backdrop-blur-xl border border-white/20 dark:border-white/10 px-5 py-4 transition-all duration-300 hover:bg-white/60 dark:hover:bg-white/10 hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20 hover:scale-[1.01] hover:-translate-y-0.5"
                               onClick={() => {
                                 setDetailModalType('pr');
                                 setDetailModalNumber(pr.number);
@@ -535,24 +575,23 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                                 </div>
                               </div>
                               <div className="flex shrink-0 items-center gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
+                                <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleOpenAgentDialog(pr);
                                   }}
                                   disabled={isCheckingOut}
+                                  className="flex items-center gap-2 rounded-full bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary backdrop-blur-sm transition-all hover:bg-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {isCheckingOut ? (
                                     <>
-                                      <Loader2 className="mr-2 size-4 animate-spin" />
+                                      <Loader2 className="size-4 animate-spin" />
                                       Checking out...
                                     </>
                                   ) : (
                                     'Open in Workspace'
                                   )}
-                                </Button>
+                                </button>
                               </div>
                             </div>
                           );
