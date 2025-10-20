@@ -1,5 +1,5 @@
 import { Client, ClientChannel } from 'ssh2';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
 import { log } from '../lib/logger';
@@ -41,6 +41,16 @@ export class SSHService {
 
       try {
         const keyPath = config.keyPath || join(homedir(), '.ssh', 'id_rsa');
+
+        if (!existsSync(keyPath)) {
+          clearTimeout(timeout);
+          resolve({
+            success: false,
+            error: `SSH key not found at ${keyPath}. Please configure your SSH key path.`
+          });
+          return;
+        }
+
         const privateKey = readFileSync(keyPath);
 
         client.connect({
@@ -104,6 +114,15 @@ export class SSHService {
 
       try {
         const keyPath = config.keyPath || join(homedir(), '.ssh', 'id_rsa');
+
+        if (!existsSync(keyPath)) {
+          resolve({
+            success: false,
+            error: `SSH key not found at ${keyPath}. Please configure your SSH key path.`
+          });
+          return;
+        }
+
         const privateKey = readFileSync(keyPath);
 
         client.connect({
