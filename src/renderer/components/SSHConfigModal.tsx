@@ -53,6 +53,12 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    if (isConnected && directories.length === 0) {
+      loadDirectories('~');
+    }
+  }, [isConnected]);
+
   const loadDefaultKeyPath = async () => {
     try {
       const api = (window as any).electronAPI;
@@ -109,9 +115,8 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
         return;
       }
 
-      // Connection successful - load home directory
+      // Connection successful - useEffect will trigger directory load
       setIsConnected(true);
-      await loadDirectories('~');
     } catch (error) {
       setConnectionError('Failed to connect. Check your SSH configuration.');
       setIsConnected(false);
@@ -120,7 +125,7 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
     }
   };
 
-  const loadDirectories = async (path: string) => {
+  const loadDirectories = React.useCallback(async (path: string) => {
     setIsLoadingDirs(true);
     try {
       const api = (window as any).electronAPI;
@@ -138,7 +143,7 @@ export const SSHConfigModal: React.FC<SSHConfigModalProps> = ({
     } finally {
       setIsLoadingDirs(false);
     }
-  };
+  }, [host, user, port, keyPath]);
 
   const navigateUp = async () => {
     const parentPath = currentPath.split('/').slice(0, -1).join('/') || '/';
