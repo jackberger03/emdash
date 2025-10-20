@@ -157,8 +157,18 @@ export function startPty(options: {
     const initialCols = Math.max(20, cols);
     const initialRows = Math.max(10, rows);
     const remoteShellCommand = (shell || '$SHELL -i -l').trim();
-    const remoteShellEscaped = remoteShellCommand.replace(/'/g, "'\\''");
     const remoteDirEscaped = remotePath.replace(/'/g, "'\\''");
+
+    let remoteCommandQuoted: string;
+    if (shell) {
+      const parsedRemote = parseCommand(remoteShellCommand);
+      const tokens = [parsedRemote.command, ...parsedRemote.args];
+      remoteCommandQuoted = tokens
+        .map((token) => `'${token.replace(/'/g, "'\\''")}'`)
+        .join(' ');
+    } else {
+      remoteCommandQuoted = '"$SHELL" -i -l';
+    }
 
     const remoteScriptParts = [
       `__EMDASH_SOCKET=\"${remoteSocketPath}\"`,
@@ -168,10 +178,10 @@ export function startPty(options: {
       'if command -v tmux >/dev/null 2>&1; then',
       '  mkdir -p "$(dirname \"$__EMDASH_SOCKET\")"',
       '  if [ ! -f "$__EMDASH_CONF" ]; then printf %s\\n "set-option -g status off" "set-option -g set-titles on" "set-option -g mouse off" > "$__EMDASH_CONF"; fi',
-      `  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" '${remoteShellEscaped}'`,
+      `  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" -- ${remoteCommandQuoted}`,
       '  tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" attach-session -t "$__EMDASH_SESSION"',
       'else',
-      `  cd "$__EMDASH_DIR" && exec '${remoteShellEscaped}'`,
+      `  cd "$__EMDASH_DIR" && exec ${remoteCommandQuoted}`,
       'fi',
     ];
     const remoteScript = remoteScriptParts.join(' ; ');
