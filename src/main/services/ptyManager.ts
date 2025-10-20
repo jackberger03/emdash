@@ -167,7 +167,7 @@ export function startPty(options: {
       `__EMDASH_DIR='${remoteDirEscaped}';`,
       `__EMDASH_CONF="${remoteSocketDir}/tmux.conf";`,
       `if command -v tmux >/dev/null 2>&1;`,
-      `then mkdir -p "$(dirname "$__EMDASH_SOCKET")"`,
+      `then mkdir -p "${remoteSocketDir}"`,
       `&& if [ ! -f "$__EMDASH_CONF" ]; then printf '%s\\n' "set-option -g status off" "set-option -g set-titles on" "set-option -g mouse off" > "$__EMDASH_CONF"; fi`,
       `&& { tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" has-session -t "$__EMDASH_SESSION" 2>/dev/null || tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" new-session -d -s "$__EMDASH_SESSION" -x ${initialCols} -y ${initialRows} -c "$__EMDASH_DIR" ${remoteShellEscaped}; }`,
       `&& tmux -f "$__EMDASH_CONF" -S "$__EMDASH_SOCKET" attach-session -t "$__EMDASH_SESSION";`,
