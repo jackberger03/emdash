@@ -1150,6 +1150,38 @@ const AppContent: React.FC = () => {
     }
   };
 
+  const handleDeleteProject = async (project: Project) => {
+    try {
+      const result = await window.electronAPI.deleteProject(project.id);
+      if (!result.success) {
+        throw new Error(result.error || 'Failed to delete project');
+      }
+
+      setProjects((prev) => prev.filter((p) => p.id !== project.id));
+
+      if (selectedProject?.id === project.id) {
+        setSelectedProject(null);
+        setActiveWorkspace(null);
+      }
+
+      toast({
+        title: 'Project deleted',
+        description: `"${project.name}" was removed.`,
+      });
+    } catch (error) {
+      const { log } = await import('./lib/logger');
+      log.error('Failed to delete project:', error as any);
+      toast({
+        title: 'Error',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Could not delete project. Check the console for details.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleReorderProjects = (sourceId: string, targetId: string) => {
     setProjects((prev) => {
       const list = [...prev];
@@ -1300,6 +1332,7 @@ const AppContent: React.FC = () => {
               activeWorkspace={activeWorkspace}
               onSelectWorkspace={handleSelectWorkspace}
               onDeleteWorkspace={handleDeleteWorkspace}
+              onDeleteProject={handleDeleteProject}
               isCreatingWorkspace={isCreatingWorkspace}
               onCheckoutPullRequest={handleCheckoutPullRequest}
             />

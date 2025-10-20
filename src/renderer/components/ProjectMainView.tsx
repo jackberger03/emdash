@@ -147,6 +147,7 @@ interface ProjectMainViewProps {
   activeWorkspace: Workspace | null;
   onSelectWorkspace: (workspace: Workspace) => void;
   onDeleteWorkspace: (project: Project, workspace: Workspace) => void | Promise<void>;
+  onDeleteProject: (project: Project) => void | Promise<void>;
   isCreatingWorkspace?: boolean;
   onCheckoutPullRequest: (
     pr: PullRequestSummary,
@@ -160,6 +161,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
   activeWorkspace,
   onSelectWorkspace,
   onDeleteWorkspace,
+  onDeleteProject,
   isCreatingWorkspace = false,
   onCheckoutPullRequest,
 }) => {
@@ -268,6 +270,10 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                   </BreadcrumbList>
                 </Breadcrumb>
               </div>
+              <Button variant="destructive" size="sm" onClick={() => onDeleteProject(project)}>
+                <Trash className="mr-2 size-4" />
+                Delete Project
+              </Button>
             </header>
             <Separator className="my-2" />
           </div>
