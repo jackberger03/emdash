@@ -666,6 +666,7 @@ const ChatInterface: React.FC<Props> = ({
       <ProviderBar
         provider={provider}
         linearIssue={workspace.metadata?.linearIssue || null}
+        githubIssue={workspace.metadata?.githubIssue || null}
         onProviderChange={handleProviderChange}
         allowChange={isTerminal ? true : !providerLocked}
         workspaceId={workspace.id}

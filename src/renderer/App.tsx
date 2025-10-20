@@ -23,6 +23,7 @@ import { RightSidebarProvider, useRightSidebar } from './components/ui/right-sid
 import RightSidebar from './components/RightSidebar';
 import { type Provider } from './types';
 import { type LinearIssueSummary } from './types/linear';
+import { type GitHubIssueSummary } from './types/github';
 import { type Workspace, type WorkspaceMetadata } from './types/chat';
 import { providerMeta, type UiProvider } from './providers/meta';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
@@ -608,7 +609,8 @@ const AppContent: React.FC = () => {
     initialPrompt?: string,
     selectedProvider?: Provider,
     linkedLinearIssue: LinearIssueSummary | null = null,
-    useWorktree: boolean = true
+    useWorktree: boolean = true,
+    linkedGitHubIssue: GitHubIssueSummary | null = null
   ) => {
     if (!selectedProject) return;
 
@@ -666,13 +668,39 @@ const AppContent: React.FC = () => {
           }
           parts.push('');
         }
+
+        if (linkedGitHubIssue) {
+          const issue = linkedGitHubIssue;
+          const detailParts: string[] = [];
+          if (issue.state) detailParts.push(`State: ${issue.state}`);
+          if (issue.assignee?.login) detailParts.push(`Assignee: ${issue.assignee.login}`);
+          if (issue.labels && issue.labels.length > 0) {
+            detailParts.push(`Labels: ${issue.labels.map((l) => l.name).join(', ')}`);
+          }
+          if (issue.milestone?.title) detailParts.push(`Milestone: ${issue.milestone.title}`);
+
+          parts.push(`GitHub: #${issue.number} — ${issue.title}`);
+          if (detailParts.length) parts.push(`Details: ${detailParts.join(' • ')}`);
+          if (issue.url) parts.push(`URL: ${issue.url}`);
+          if (issue.body) {
+            parts.push('');
+            parts.push('Issue Description:');
+            parts.push(issue.body.trim());
+          }
+          parts.push('');
+        }
+
         parts.push(initialPrompt.trim());
         preparedPrompt = parts.join('\n');
       }
 
       const workspaceMetadata: WorkspaceMetadata | null =
-        linkedLinearIssue || preparedPrompt
-          ? { linearIssue: linkedLinearIssue ?? null, initialPrompt: preparedPrompt ?? null }
+        linkedLinearIssue || linkedGitHubIssue || preparedPrompt
+          ? {
+              linearIssue: linkedLinearIssue ?? null,
+              githubIssue: linkedGitHubIssue ?? null,
+              initialPrompt: preparedPrompt ?? null
+            }
           : null;
 
       let newWorkspace: Workspace;
@@ -770,6 +798,56 @@ const AppContent: React.FC = () => {
           } catch (seedError) {
             const { log } = await import('./lib/logger');
             log.error('Failed to seed workspace with Linear issue context:', seedError as any);
+          }
+        }
+
+        if (workspaceMetadata?.githubIssue) {
+          try {
+            const convoResult = await window.electronAPI.getOrCreateDefaultConversation(
+              newWorkspace.id
+            );
+
+            if (convoResult?.success && convoResult.conversation?.id) {
+              const issue = workspaceMetadata.githubIssue;
+              const detailParts: string[] = [];
+
+              if (issue.state) detailParts.push(`State: ${issue.state}`);
+              if (issue.assignee?.login) detailParts.push(`Assignee: ${issue.assignee.login}`);
+              if (issue.labels && issue.labels.length > 0) {
+                detailParts.push(`Labels: ${issue.labels.map((l) => l.name).join(', ')}`);
+              }
+              if (issue.milestone?.title) detailParts.push(`Milestone: ${issue.milestone.title}`);
+
+              const lines = [`Linked GitHub issue: #${issue.number} — ${issue.title}`];
+
+              if (detailParts.length) {
+                lines.push(`Details: ${detailParts.join(' • ')}`);
+              }
+
+              if (issue.url) {
+                lines.push(`URL: ${issue.url}`);
+              }
+
+              if (issue.body) {
+                lines.push('');
+                lines.push('Issue Description:');
+                lines.push(issue.body.trim());
+              }
+
+              await window.electronAPI.saveMessage({
+                id: `github-context-${newWorkspace.id}`,
+                conversationId: convoResult.conversation.id,
+                content: lines.join('\n'),
+                sender: 'agent',
+                metadata: JSON.stringify({
+                  isGitHubContext: true,
+                  githubIssue: issue,
+                }),
+              });
+            }
+          } catch (seedError) {
+            const { log } = await import('./lib/logger');
+            log.error('Failed to seed workspace with GitHub issue context:', seedError as any);
           }
         }
 
@@ -1352,6 +1430,7 @@ const AppContent: React.FC = () => {
             onClose={() => setShowWorkspaceModal(false)}
             onCreateWorkspace={handleCreateWorkspace}
             projectName={selectedProject?.name || ''}
+            projectPath={selectedProject?.path}
             defaultBranch={selectedProject?.gitInfo.branch || 'main'}
             existingNames={(selectedProject?.workspaces || []).map((w) => w.name)}
           />

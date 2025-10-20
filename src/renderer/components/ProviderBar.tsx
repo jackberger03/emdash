@@ -2,9 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ExternalLink, ChevronDown, Terminal } from 'lucide-react';
 import { type Provider } from '../types';
 import { type LinearIssueSummary } from '../types/linear';
+import { type GitHubIssueSummary } from '../types/github';
 import { TerminalPane } from './TerminalPane';
 import openaiLogo from '../../assets/images/openai.png';
 import linearLogo from '../../assets/images/linear.png';
+import githubLogo from '../../assets/images/github.png';
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from './ui/tooltip';
 import claudeLogo from '../../assets/images/claude.png';
 import factoryLogo from '../../assets/images/factorydroid.png';
@@ -21,6 +23,7 @@ import { useTheme } from './ThemeProvider';
 type Props = {
   provider: Provider;
   linearIssue?: LinearIssueSummary | null;
+  githubIssue?: GitHubIssueSummary | null;
   onProviderChange?: (provider: Provider) => void;
   allowChange?: boolean;
   workspaceId?: string;
@@ -32,6 +35,7 @@ type Props = {
 export const ProviderBar: React.FC<Props> = ({
   provider,
   linearIssue,
+  githubIssue,
   onProviderChange,
   allowChange = true,
   workspaceId,
@@ -335,6 +339,93 @@ export const ProviderBar: React.FC<Props> = ({
                               >
                                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                                 <span className="sr-only">Open in Linear</span>
+                              </a>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : null}
+
+              {githubIssue ? (
+                <TooltipProvider delayDuration={250}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        className="inline-flex h-7 items-center gap-1.5 rounded-md border border-gray-200 bg-gray-100 px-2 text-xs text-foreground dark:border-gray-700 dark:bg-gray-700"
+                        title={`#${githubIssue.number} — ${githubIssue.title || ''}`}
+                        onClick={() => {
+                          try {
+                            if (githubIssue.url)
+                              (window as any).electronAPI?.openExternal?.(githubIssue.url);
+                          } catch {}
+                        }}
+                      >
+                        <img src={githubLogo} alt="GitHub" className="h-3.5 w-3.5" />
+                        <span className="font-medium">#{githubIssue.number}</span>
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent
+                      side="bottom"
+                      className="max-w-sm bg-white text-foreground dark:bg-gray-900 dark:text-foreground"
+                    >
+                      <div className="text-xs">
+                        <div className="mb-1.5 flex min-w-0 items-center gap-2">
+                          <span className="inline-flex shrink-0 items-center gap-1.5 rounded border border-gray-200 bg-gray-100 px-1.5 py-0.5 dark:border-gray-700 dark:bg-gray-800">
+                            <img src={githubLogo} alt="GitHub" className="h-3.5 w-3.5" />
+                            <span className="text-[11px] font-medium text-foreground">
+                              #{githubIssue.number}
+                            </span>
+                          </span>
+                          {githubIssue.title ? (
+                            <span className="truncate text-foreground">{githubIssue.title}</span>
+                          ) : null}
+                        </div>
+                        <div className="space-y-0.5 text-muted-foreground">
+                          {githubIssue.state ? (
+                            <div>
+                              <span className="font-medium">State:</span> {githubIssue.state}
+                            </div>
+                          ) : null}
+                          {githubIssue.assignee?.login ? (
+                            <div>
+                              <span className="font-medium">Assignee:</span>{' '}
+                              {githubIssue.assignee?.login}
+                            </div>
+                          ) : null}
+                          {githubIssue.labels && githubIssue.labels.length > 0 ? (
+                            <div>
+                              <span className="font-medium">Labels:</span>{' '}
+                              {githubIssue.labels.map((l) => l.name).join(', ')}
+                            </div>
+                          ) : null}
+                          {githubIssue.milestone?.title ? (
+                            <div>
+                              <span className="font-medium">Milestone:</span>{' '}
+                              {githubIssue.milestone?.title}
+                            </div>
+                          ) : null}
+                          {githubIssue.url ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-medium">Issue:</span>
+                              <a
+                                href={githubIssue.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Open on GitHub"
+                                className="inline-flex items-center rounded p-0.5 text-muted-foreground hover:text-foreground"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  try {
+                                    (window as any).electronAPI?.openExternal?.(githubIssue.url!);
+                                  } catch {}
+                                }}
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                                <span className="sr-only">Open on GitHub</span>
                               </a>
                             </div>
                           ) : null}

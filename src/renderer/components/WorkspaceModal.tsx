@@ -11,7 +11,9 @@ import { ProviderSelector } from './ProviderSelector';
 import { type Provider } from '../types';
 import { Separator } from './ui/separator';
 import { type LinearIssueSummary } from '../types/linear';
+import { type GitHubIssueSummary } from '../types/github';
 import { LinearIssueSelector } from './LinearIssueSelector';
+import { GitHubIssueSelector } from './GitHubIssueSelector';
 import { Switch } from './ui/switch';
 
 interface WorkspaceModalProps {
@@ -21,10 +23,12 @@ interface WorkspaceModalProps {
     name: string,
     initialPrompt?: string,
     selectedProvider?: Provider,
-    linkedIssue?: LinearIssueSummary | null,
-    useWorktree?: boolean
+    linkedLinearIssue?: LinearIssueSummary | null,
+    useWorktree?: boolean,
+    linkedGitHubIssue?: GitHubIssueSummary | null
   ) => void;
   projectName: string;
+  projectPath?: string;
   defaultBranch: string;
   existingNames?: string[];
 }
@@ -34,6 +38,7 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
   onClose,
   onCreateWorkspace,
   projectName,
+  projectPath,
   defaultBranch,
   existingNames = [],
 }) => {
@@ -44,7 +49,8 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [touched, setTouched] = useState(false);
   const [initialPrompt, setInitialPrompt] = useState('');
-  const [selectedIssue, setSelectedIssue] = useState<LinearIssueSummary | null>(null);
+  const [selectedLinearIssue, setSelectedLinearIssue] = useState<LinearIssueSummary | null>(null);
+  const [selectedGitHubIssue, setSelectedGitHubIssue] = useState<GitHubIssueSummary | null>(null);
   const [useWorktree, setUseWorktree] = useState(true);
   const shouldReduceMotion = useReducedMotion();
 
@@ -85,7 +91,8 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
 
   useEffect(() => {
     if (!isOpen) {
-      setSelectedIssue(null);
+      setSelectedLinearIssue(null);
+      setSelectedGitHubIssue(null);
     }
   }, [isOpen]);
 
@@ -150,13 +157,15 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
                           convertToWorkspaceName(workspaceName),
                           showAdvanced ? initialPrompt.trim() || undefined : undefined,
                           selectedProvider,
-                          selectedIssue,
-                          useWorktree
+                          selectedLinearIssue,
+                          useWorktree,
+                          selectedGitHubIssue
                         );
                         setWorkspaceName('');
                         setInitialPrompt('');
                         setSelectedProvider('codex');
-                        setSelectedIssue(null);
+                        setSelectedLinearIssue(null);
+                        setSelectedGitHubIssue(null);
                         setUseWorktree(true);
                         setShowAdvanced(false);
                         setError(null);
@@ -260,9 +269,26 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
                             </label>
                             <div className="min-w-0 flex-1">
                               <LinearIssueSelector
-                                selectedIssue={selectedIssue}
-                                onIssueChange={setSelectedIssue}
+                                selectedIssue={selectedLinearIssue}
+                                onIssueChange={setSelectedLinearIssue}
                                 isOpen={isOpen && showAdvanced}
+                                className="w-full"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-4">
+                            <label
+                              htmlFor="github-issue"
+                              className="w-32 shrink-0 pt-2 text-sm font-medium text-foreground"
+                            >
+                              GitHub issue
+                            </label>
+                            <div className="min-w-0 flex-1">
+                              <GitHubIssueSelector
+                                selectedIssue={selectedGitHubIssue}
+                                onIssueChange={setSelectedGitHubIssue}
+                                isOpen={isOpen && showAdvanced}
+                                projectPath={projectPath}
                                 className="w-full"
                               />
                             </div>
@@ -281,9 +307,11 @@ const WorkspaceModal: React.FC<WorkspaceModalProps> = ({
                               value={initialPrompt}
                               onChange={(e) => setInitialPrompt(e.target.value)}
                               placeholder={
-                                selectedIssue
-                                  ? `e.g. Fix the attached Linear ticket ${selectedIssue.identifier} — describe any constraints.`
-                                  : `e.g. Summarize the key problems and propose a plan.`
+                                selectedLinearIssue
+                                  ? `e.g. Fix the attached Linear ticket ${selectedLinearIssue.identifier} — describe any constraints.`
+                                  : selectedGitHubIssue
+                                    ? `e.g. Fix the attached GitHub issue #${selectedGitHubIssue.number} — describe any constraints.`
+                                    : `e.g. Summarize the key problems and propose a plan.`
                               }
                               className="min-h-[80px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none"
                               rows={3}
