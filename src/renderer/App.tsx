@@ -699,7 +699,7 @@ const AppContent: React.FC = () => {
           ? {
               linearIssue: linkedLinearIssue ?? null,
               githubIssue: linkedGitHubIssue ?? null,
-              initialPrompt: preparedPrompt ?? null
+              initialPrompt: preparedPrompt ?? null,
             }
           : null;
 

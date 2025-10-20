@@ -5,6 +5,7 @@ import { Breadcrumb, BreadcrumbItem, BreadcrumbLink, BreadcrumbList } from './ui
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from './ui/tabs';
 import { usePrStatus } from '../hooks/usePrStatus';
 import { usePullRequests, type PullRequestSummary } from '../hooks/usePullRequests';
 import { useWorkspaceChanges } from '../hooks/useWorkspaceChanges';
@@ -162,20 +163,61 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
   isCreatingWorkspace = false,
   onCheckoutPullRequest,
 }) => {
-  const [isPrSectionOpen, setIsPrSectionOpen] = useState(false);
-  const canLoadPrs = Boolean(project.githubInfo?.connected && project.gitInfo?.isGitRepo);
+  const [activeTab, setActiveTab] = useState('workspaces');
+  const canLoadGitHub = Boolean(project.githubInfo?.connected && project.gitInfo?.isGitRepo);
+
+  // Pull Requests state
   const {
     prs,
     loading: prsLoading,
     error: prsError,
     refresh: refreshPrs,
   } = usePullRequests(
-    canLoadPrs && isPrSectionOpen ? project.path : undefined,
-    canLoadPrs && isPrSectionOpen
+    canLoadGitHub && activeTab === 'pull-requests' ? project.path : undefined,
+    canLoadGitHub && activeTab === 'pull-requests'
   );
   const [checkoutPrNumber, setCheckoutPrNumber] = useState<number | null>(null);
   const [selectedPr, setSelectedPr] = useState<PullRequestSummary | null>(null);
   const [showAgentDialog, setShowAgentDialog] = useState(false);
+
+  // Issues state
+  const [issues, setIssues] = useState<any[]>([]);
+  const [issuesLoading, setIssuesLoading] = useState(false);
+  const [issuesError, setIssuesError] = useState<string | null>(null);
+
+  // Load GitHub issues
+  const loadIssues = async () => {
+    if (!canLoadGitHub) return;
+
+    setIssuesLoading(true);
+    setIssuesError(null);
+
+    try {
+      const api = (window as any).electronAPI;
+      if (!api?.githubGetIssues) {
+        throw new Error('GitHub issues API not available');
+      }
+
+      const result = await api.githubGetIssues({ projectPath: project.path, limit: 50 });
+
+      if (!result?.success) {
+        throw new Error(result?.error || 'Failed to load GitHub issues');
+      }
+
+      setIssues(result.issues ?? []);
+    } catch (error) {
+      setIssuesError(error instanceof Error ? error.message : 'Failed to load issues');
+    } finally {
+      setIssuesLoading(false);
+    }
+  };
+
+  // Load issues when tab becomes active
+  useEffect(() => {
+    if (activeTab === 'issues' && canLoadGitHub) {
+      loadIssues();
+    }
+  }, [activeTab, canLoadGitHub, project.path]);
 
   const handleOpenAgentDialog = (pr: PullRequestSummary) => {
     setSelectedPr(pr);
@@ -230,69 +272,188 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
             <Separator className="my-2" />
           </div>
 
-          <div className="max-w-4xl space-y-6">
-            <div className="space-y-3">
-              <div className="flex items-center justify-start gap-3">
-                <h2 className="text-lg font-semibold">Workspaces</h2>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={onCreateWorkspace}
-                  disabled={isCreatingWorkspace}
-                  aria-busy={isCreatingWorkspace}
-                >
-                  {isCreatingWorkspace ? (
-                    <>
-                      <Loader2 className="mr-2 size-4 animate-spin" />
-                      Creating…
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="mr-2 size-4" />
-                      Create workspace
-                    </>
-                  )}
-                </Button>
-              </div>
-              <div className="flex flex-col gap-3">
-                {(project.workspaces ?? []).map((ws) => (
-                  <WorkspaceRow
-                    key={ws.id}
-                    ws={ws}
-                    active={activeWorkspace?.id === ws.id}
-                    onClick={() => onSelectWorkspace(ws)}
-                    onDelete={() => onDeleteWorkspace(project, ws)}
-                  />
-                ))}
-              </div>
-            </div>
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="max-w-4xl">
+            <TabsList>
+              <TabsTrigger value="workspaces">Workspaces</TabsTrigger>
+              <TabsTrigger value="issues">Issues</TabsTrigger>
+              <TabsTrigger value="pull-requests">Pull Requests</TabsTrigger>
+            </TabsList>
 
-            {(!project.workspaces || project.workspaces.length === 0) && (
-              <Alert>
-                <AlertTitle>What's a workspace?</AlertTitle>
-                <AlertDescription className="flex items-center justify-between gap-4">
-                  <p className="text-sm text-muted-foreground">
-                    Each workspace is an isolated copy and branch of your repo (Git-tracked files
-                    only).
-                  </p>
-                </AlertDescription>
-              </Alert>
-            )}
+            <TabsContent value="workspaces" className="space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-start gap-3">
+                  <h2 className="text-lg font-semibold">Workspaces</h2>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={onCreateWorkspace}
+                    disabled={isCreatingWorkspace}
+                    aria-busy={isCreatingWorkspace}
+                  >
+                    {isCreatingWorkspace ? (
+                      <>
+                        <Loader2 className="mr-2 size-4 animate-spin" />
+                        Creating…
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 size-4" />
+                        Create workspace
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {(project.workspaces ?? []).map((ws) => (
+                    <WorkspaceRow
+                      key={ws.id}
+                      ws={ws}
+                      active={activeWorkspace?.id === ws.id}
+                      onClick={() => onSelectWorkspace(ws)}
+                      onDelete={() => onDeleteWorkspace(project, ws)}
+                    />
+                  ))}
+                </div>
+              </div>
 
-            {canLoadPrs && (
-              <Collapsible open={isPrSectionOpen} onOpenChange={setIsPrSectionOpen}>
+              {(!project.workspaces || project.workspaces.length === 0) && (
+                <Alert>
+                  <AlertTitle>What's a workspace?</AlertTitle>
+                  <AlertDescription className="flex items-center justify-between gap-4">
+                    <p className="text-sm text-muted-foreground">
+                      Each workspace is an isolated copy and branch of your repo (Git-tracked files
+                      only).
+                    </p>
+                  </AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+
+            <TabsContent value="issues" className="space-y-6">
+              {canLoadGitHub ? (
                 <div className="space-y-3">
                   <div className="flex items-center justify-start gap-3">
-                    <CollapsibleTrigger asChild>
-                      <Button variant="ghost" size="sm" className="p-0 hover:bg-transparent">
-                        <h2 className="flex items-center gap-2 text-lg font-semibold">
-                          Pull Requests
-                          <ChevronDown
-                            className={`size-4 transition-transform ${isPrSectionOpen ? 'rotate-180' : ''}`}
-                          />
-                        </h2>
-                      </Button>
-                    </CollapsibleTrigger>
+                    <h2 className="text-lg font-semibold">Issues</h2>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => loadIssues()}
+                      disabled={issuesLoading}
+                    >
+                      <RefreshCw className={`mr-2 size-4 ${issuesLoading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                  </div>
+
+                  <div className="space-y-3">
+                    {issuesError && (
+                      <Alert variant="destructive">
+                        <AlertTitle>Failed to load issues</AlertTitle>
+                        <AlertDescription>{issuesError}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    {issuesLoading && !issues.length && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="size-4 animate-spin" />
+                        Loading issues...
+                      </div>
+                    )}
+
+                    {!issuesLoading && !issuesError && issues.length === 0 && (
+                      <Alert>
+                        <AlertTitle>No open issues</AlertTitle>
+                        <AlertDescription>
+                          There are no open issues for this repository.
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {issues.length > 0 && (
+                      <div className="flex flex-col gap-3">
+                        {issues.map((issue) => (
+                          <div
+                            key={issue.id}
+                            className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-base font-medium leading-tight">
+                                  #{issue.number}
+                                </span>
+                                <span className="text-base font-medium leading-tight tracking-tight">
+                                  {issue.title}
+                                </span>
+                                {issue.state === 'closed' && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    closed
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+                                {issue.labels && issue.labels.length > 0 && (
+                                  <div className="flex items-center gap-1">
+                                    {issue.labels.slice(0, 3).map((label: any, idx: number) => (
+                                      <span
+                                        key={idx}
+                                        className="rounded-full px-2 py-0.5 text-[10px]"
+                                        style={{
+                                          backgroundColor: label.color
+                                            ? `#${label.color}`
+                                            : '#gray',
+                                          color: '#fff',
+                                        }}
+                                      >
+                                        {label.name}
+                                      </span>
+                                    ))}
+                                    {issue.labels.length > 3 && (
+                                      <span className="text-[10px]">
+                                        +{issue.labels.length - 3} more
+                                      </span>
+                                    )}
+                                  </div>
+                                )}
+                                {issue.assignee?.login && (
+                                  <>
+                                    <span>•</span>
+                                    <span>assigned to {issue.assignee.login}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  if (issue.url) {
+                                    (window as any).electronAPI?.openExternal?.(issue.url);
+                                  }
+                                }}
+                              >
+                                View on GitHub
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <Alert>
+                  <AlertTitle>GitHub not connected</AlertTitle>
+                  <AlertDescription>Connect to GitHub to view and manage issues.</AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+
+            <TabsContent value="pull-requests" className="space-y-6">
+              {canLoadGitHub ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-start gap-3">
+                    <h2 className="text-lg font-semibold">Pull Requests</h2>
                     <Button
                       variant="secondary"
                       size="sm"
@@ -304,7 +465,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                     </Button>
                   </div>
 
-                  <CollapsibleContent className="space-y-3">
+                  <div className="space-y-3">
                     {prsError && (
                       <Alert variant="destructive">
                         <AlertTitle>Failed to load pull requests</AlertTitle>
@@ -386,21 +547,28 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                         })}
                       </div>
                     )}
-                  </CollapsibleContent>
+                  </div>
                 </div>
-              </Collapsible>
-            )}
+              ) : (
+                <Alert>
+                  <AlertTitle>GitHub not connected</AlertTitle>
+                  <AlertDescription>
+                    Connect to GitHub to view and manage pull requests.
+                  </AlertDescription>
+                </Alert>
+              )}
+            </TabsContent>
+          </Tabs>
 
-            <AgentSelectionDialog
-              isOpen={showAgentDialog}
-              onClose={() => {
-                setShowAgentDialog(false);
-                setSelectedPr(null);
-              }}
-              onSelect={handleAgentSelected}
-              prNumber={selectedPr?.number ?? 0}
-            />
-          </div>
+          <AgentSelectionDialog
+            isOpen={showAgentDialog}
+            onClose={() => {
+              setShowAgentDialog(false);
+              setSelectedPr(null);
+            }}
+            onSelect={handleAgentSelected}
+            prNumber={selectedPr?.number ?? 0}
+          />
         </div>
       </div>
     </div>
