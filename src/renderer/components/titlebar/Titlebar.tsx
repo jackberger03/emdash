@@ -4,16 +4,23 @@ import SidebarLeftToggleButton from './SidebarLeftToggleButton';
 import SidebarRightToggleButton from './SidebarRightToggleButton';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/tooltip';
+import OpenInMenu from './OpenInMenu';
 
 interface TitlebarProps {
   onToggleSettings: () => void;
   isSettingsOpen?: boolean;
+  currentPath?: string | null;
 }
 
-const Titlebar: React.FC<TitlebarProps> = ({ onToggleSettings, isSettingsOpen = false }) => {
+const Titlebar: React.FC<TitlebarProps> = ({
+  onToggleSettings,
+  isSettingsOpen = false,
+  currentPath,
+}) => {
   return (
     <header className="fixed inset-x-0 top-0 z-[80] flex h-[var(--tb,36px)] items-center justify-end bg-gray-50 pr-2 shadow-[inset_0_-1px_0_hsl(var(--border))] [-webkit-app-region:drag] dark:bg-gray-900">
-      <div className="pointer-events-auto flex items-center [-webkit-app-region:no-drag]">
+      <div className="pointer-events-auto flex items-center gap-1 [-webkit-app-region:no-drag]">
+        {currentPath ? <OpenInMenu path={currentPath} align="right" /> : null}
         <SidebarLeftToggleButton />
         <SidebarRightToggleButton />
         <TooltipProvider delayDuration={200}>
