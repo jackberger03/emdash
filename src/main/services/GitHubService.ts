@@ -487,4 +487,135 @@ export class GitHubService {
       return [];
     }
   }
+
+  /**
+   * Get a single issue with full details including comments
+   */
+  async getIssue(projectPath: string, issueNumber: number): Promise<any> {
+    try {
+      const { stdout } = await execAsync(
+        `gh issue view ${issueNumber} --json number,title,body,url,state,labels,assignees,milestone,updatedAt,createdAt,author,comments`,
+        { cwd: projectPath }
+      );
+
+      const issue = JSON.parse(stdout || '{}');
+
+      return {
+        id: issue.number,
+        number: issue.number,
+        title: issue.title || `Issue #${issue.number}`,
+        body: issue.body || null,
+        url: issue.url || null,
+        state: issue.state || 'open',
+        labels: issue.labels || [],
+        assignees: issue.assignees || [],
+        milestone: issue.milestone || null,
+        updatedAt: issue.updatedAt || null,
+        createdAt: issue.createdAt || null,
+        author: issue.author || null,
+        comments: issue.comments || [],
+      };
+    } catch (error) {
+      console.error('Failed to fetch issue details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a single PR with full details including comments
+   */
+  async getPullRequest(projectPath: string, prNumber: number): Promise<any> {
+    try {
+      const { stdout } = await execAsync(
+        `gh pr view ${prNumber} --json number,title,body,url,state,labels,assignees,milestone,updatedAt,createdAt,author,comments,headRefName,baseRefName,isDraft,additions,deletions,changedFiles`,
+        { cwd: projectPath }
+      );
+
+      const pr = JSON.parse(stdout || '{}');
+
+      return {
+        number: pr.number,
+        title: pr.title || `PR #${pr.number}`,
+        body: pr.body || null,
+        url: pr.url || null,
+        state: pr.state || 'OPEN',
+        labels: pr.labels || [],
+        assignees: pr.assignees || [],
+        milestone: pr.milestone || null,
+        updatedAt: pr.updatedAt || null,
+        createdAt: pr.createdAt || null,
+        author: pr.author || null,
+        comments: pr.comments || [],
+        headRefName: pr.headRefName,
+        baseRefName: pr.baseRefName,
+        isDraft: pr.isDraft || false,
+        additions: pr.additions || 0,
+        deletions: pr.deletions || 0,
+        changedFiles: pr.changedFiles || 0,
+      };
+    } catch (error) {
+      console.error('Failed to fetch PR details:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add a comment to an issue
+   */
+  async addIssueComment(projectPath: string, issueNumber: number, body: string): Promise<void> {
+    try {
+      await execAsync(`gh issue comment ${issueNumber} --body ${JSON.stringify(body)}`, {
+        cwd: projectPath,
+      });
+    } catch (error) {
+      console.error('Failed to add comment to issue:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add a comment to a PR
+   */
+  async addPRComment(projectPath: string, prNumber: number, body: string): Promise<void> {
+    try {
+      await execAsync(`gh pr comment ${prNumber} --body ${JSON.stringify(body)}`, {
+        cwd: projectPath,
+      });
+    } catch (error) {
+      console.error('Failed to add comment to PR:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Close an issue
+   */
+  async closeIssue(projectPath: string, issueNumber: number, comment?: string): Promise<void> {
+    try {
+      let cmd = `gh issue close ${issueNumber}`;
+      if (comment) {
+        cmd += ` --comment ${JSON.stringify(comment)}`;
+      }
+      await execAsync(cmd, { cwd: projectPath });
+    } catch (error) {
+      console.error('Failed to close issue:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Reopen an issue
+   */
+  async reopenIssue(projectPath: string, issueNumber: number, comment?: string): Promise<void> {
+    try {
+      let cmd = `gh issue reopen ${issueNumber}`;
+      if (comment) {
+        cmd += ` --comment ${JSON.stringify(comment)}`;
+      }
+      await execAsync(cmd, { cwd: projectPath });
+    } catch (error) {
+      console.error('Failed to reopen issue:', error);
+      throw error;
+    }
+  }
 }

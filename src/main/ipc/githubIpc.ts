@@ -297,4 +297,129 @@ export function registerGithubIpc() {
       }
     }
   );
+
+  ipcMain.handle(
+    'github:getIssue',
+    async (_, args: { projectPath: string; issueNumber: number }) => {
+      const { projectPath, issueNumber } = args || ({} as typeof args);
+
+      if (!projectPath) {
+        return { success: false, error: 'Project path is required' };
+      }
+
+      if (!issueNumber) {
+        return { success: false, error: 'Issue number is required' };
+      }
+
+      try {
+        const issue = await githubService.getIssue(projectPath, issueNumber);
+        return { success: true, issue };
+      } catch (error) {
+        log.error('Failed to fetch GitHub issue:', error);
+        const message = error instanceof Error ? error.message : 'Unable to fetch GitHub issue';
+        return { success: false, error: message };
+      }
+    }
+  );
+
+  ipcMain.handle('github:getPR', async (_, args: { projectPath: string; prNumber: number }) => {
+    const { projectPath, prNumber } = args || ({} as typeof args);
+
+    if (!projectPath) {
+      return { success: false, error: 'Project path is required' };
+    }
+
+    if (!prNumber) {
+      return { success: false, error: 'PR number is required' };
+    }
+
+    try {
+      const pr = await githubService.getPullRequest(projectPath, prNumber);
+      return { success: true, pr };
+    } catch (error) {
+      log.error('Failed to fetch GitHub PR:', error);
+      const message = error instanceof Error ? error.message : 'Unable to fetch GitHub PR';
+      return { success: false, error: message };
+    }
+  });
+
+  ipcMain.handle(
+    'github:addIssueComment',
+    async (_, args: { projectPath: string; issueNumber: number; body: string }) => {
+      const { projectPath, issueNumber, body } = args || ({} as typeof args);
+
+      if (!projectPath || !issueNumber || !body) {
+        return { success: false, error: 'Missing required parameters' };
+      }
+
+      try {
+        await githubService.addIssueComment(projectPath, issueNumber, body);
+        return { success: true };
+      } catch (error) {
+        log.error('Failed to add comment to issue:', error);
+        const message = error instanceof Error ? error.message : 'Unable to add comment';
+        return { success: false, error: message };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    'github:addPRComment',
+    async (_, args: { projectPath: string; prNumber: number; body: string }) => {
+      const { projectPath, prNumber, body } = args || ({} as typeof args);
+
+      if (!projectPath || !prNumber || !body) {
+        return { success: false, error: 'Missing required parameters' };
+      }
+
+      try {
+        await githubService.addPRComment(projectPath, prNumber, body);
+        return { success: true };
+      } catch (error) {
+        log.error('Failed to add comment to PR:', error);
+        const message = error instanceof Error ? error.message : 'Unable to add comment';
+        return { success: false, error: message };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    'github:closeIssue',
+    async (_, args: { projectPath: string; issueNumber: number; comment?: string }) => {
+      const { projectPath, issueNumber, comment } = args || ({} as typeof args);
+
+      if (!projectPath || !issueNumber) {
+        return { success: false, error: 'Missing required parameters' };
+      }
+
+      try {
+        await githubService.closeIssue(projectPath, issueNumber, comment);
+        return { success: true };
+      } catch (error) {
+        log.error('Failed to close issue:', error);
+        const message = error instanceof Error ? error.message : 'Unable to close issue';
+        return { success: false, error: message };
+      }
+    }
+  );
+
+  ipcMain.handle(
+    'github:reopenIssue',
+    async (_, args: { projectPath: string; issueNumber: number; comment?: string }) => {
+      const { projectPath, issueNumber, comment } = args || ({} as typeof args);
+
+      if (!projectPath || !issueNumber) {
+        return { success: false, error: 'Missing required parameters' };
+      }
+
+      try {
+        await githubService.reopenIssue(projectPath, issueNumber, comment);
+        return { success: true };
+      } catch (error) {
+        log.error('Failed to reopen issue:', error);
+        const message = error instanceof Error ? error.message : 'Unable to reopen issue';
+        return { success: false, error: message };
+      }
+    }
+  );
 }

@@ -317,6 +317,48 @@ declare global {
         issues?: any[];
         error?: string;
       }>;
+      githubGetIssue: (args: { projectPath: string; issueNumber: number }) => Promise<{
+        success: boolean;
+        issue?: any;
+        error?: string;
+      }>;
+      githubGetPR: (args: { projectPath: string; prNumber: number }) => Promise<{
+        success: boolean;
+        pr?: any;
+        error?: string;
+      }>;
+      githubAddIssueComment: (args: {
+        projectPath: string;
+        issueNumber: number;
+        body: string;
+      }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      githubAddPRComment: (args: {
+        projectPath: string;
+        prNumber: number;
+        body: string;
+      }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      githubCloseIssue: (args: {
+        projectPath: string;
+        issueNumber: number;
+        comment?: string;
+      }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
+      githubReopenIssue: (args: {
+        projectPath: string;
+        issueNumber: number;
+        comment?: string;
+      }) => Promise<{
+        success: boolean;
+        error?: string;
+      }>;
       // Linear integration
       linearCheckConnection?: () => Promise<{
         connected: boolean;
@@ -668,6 +710,44 @@ export interface ElectronAPI {
   }) => Promise<{
     success: boolean;
     issues?: any[];
+    error?: string;
+  }>;
+  githubGetIssue: (args: { projectPath: string; issueNumber: number }) => Promise<{
+    success: boolean;
+    issue?: any;
+    error?: string;
+  }>;
+  githubGetPR: (args: { projectPath: string; prNumber: number }) => Promise<{
+    success: boolean;
+    pr?: any;
+    error?: string;
+  }>;
+  githubAddIssueComment: (args: {
+    projectPath: string;
+    issueNumber: number;
+    body: string;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  githubAddPRComment: (args: { projectPath: string; prNumber: number; body: string }) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  githubCloseIssue: (args: {
+    projectPath: string;
+    issueNumber: number;
+    comment?: string;
+  }) => Promise<{
+    success: boolean;
+    error?: string;
+  }>;
+  githubReopenIssue: (args: {
+    projectPath: string;
+    issueNumber: number;
+    comment?: string;
+  }) => Promise<{
+    success: boolean;
     error?: string;
   }>;
 

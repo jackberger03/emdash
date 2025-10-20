@@ -530,6 +530,18 @@ const useCodexStream = (options?: UseCodexStreamOptions | null): UseCodexStreamR
 
       setMessages((prev) => [...prev, agentMessage]);
 
+      // Show notification if window is not focused
+      if (typeof window !== 'undefined' && !document.hasFocus()) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Codex Finished', {
+            body: 'Your Codex agent has completed its task.',
+            silent: false,
+          });
+        } else if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }
+
       // Main process now persists the final agent message. We only update UI state.
       resetStreamState();
     };

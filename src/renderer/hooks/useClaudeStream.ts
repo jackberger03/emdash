@@ -242,6 +242,19 @@ const useClaudeStream = (options?: Options | null): Result => {
           sender: agentMsg.sender,
         });
       } catch {}
+
+      // Show notification if window is not focused
+      if (typeof window !== 'undefined' && !document.hasFocus()) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('Claude Finished', {
+            body: 'Your Claude agent has completed its task.',
+            silent: false,
+          });
+        } else if ('Notification' in window && Notification.permission === 'default') {
+          Notification.requestPermission();
+        }
+      }
+
       bufferRef.current = '';
       setStreamingOutput('');
     });

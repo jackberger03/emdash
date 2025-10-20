@@ -13,6 +13,7 @@ import { ChangesBadge } from './WorkspaceChanges';
 import { Spinner } from './ui/spinner';
 import WorkspaceDeleteButton from './WorkspaceDeleteButton';
 import AgentSelectionDialog from './AgentSelectionDialog';
+import GitHubDetailModal from './GitHubDetailModal';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import type { Provider } from '../types';
 import { type Workspace, type WorkspaceMetadata } from '../types/chat';
@@ -186,6 +187,11 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
   const [issues, setIssues] = useState<any[]>([]);
   const [issuesLoading, setIssuesLoading] = useState(false);
   const [issuesError, setIssuesError] = useState<string | null>(null);
+
+  // Detail modal state
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [detailModalType, setDetailModalType] = useState<'issue' | 'pr'>('issue');
+  const [detailModalNumber, setDetailModalNumber] = useState<number>(0);
 
   // Load GitHub issues
   const loadIssues = async () => {
@@ -380,7 +386,12 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                         {issues.map((issue) => (
                           <div
                             key={issue.id}
-                            className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3"
+                            className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 transition-all hover:bg-muted/40"
+                            onClick={() => {
+                              setDetailModalType('issue');
+                              setDetailModalNumber(issue.number);
+                              setShowDetailModal(true);
+                            }}
                           >
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
@@ -427,19 +438,6 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                                   </>
                                 )}
                               </div>
-                            </div>
-                            <div className="flex shrink-0 items-center gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  if (issue.url) {
-                                    (window as any).electronAPI?.openExternal?.(issue.url);
-                                  }
-                                }}
-                              >
-                                View on GitHub
-                              </Button>
                             </div>
                           </div>
                         ))}
@@ -502,7 +500,12 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                           return (
                             <div
                               key={pr.number}
-                              className="flex items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3"
+                              className="flex cursor-pointer items-start justify-between gap-3 rounded-xl border border-border bg-background px-4 py-3 transition-all hover:bg-muted/40"
+                              onClick={() => {
+                                setDetailModalType('pr');
+                                setDetailModalNumber(pr.number);
+                                setShowDetailModal(true);
+                              }}
                             >
                               <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
@@ -535,7 +538,10 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => handleOpenAgentDialog(pr)}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenAgentDialog(pr);
+                                  }}
                                   disabled={isCheckingOut}
                                 >
                                   {isCheckingOut ? (
@@ -574,6 +580,21 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
             }}
             onSelect={handleAgentSelected}
             prNumber={selectedPr?.number ?? 0}
+          />
+
+          <GitHubDetailModal
+            isOpen={showDetailModal}
+            onClose={() => setShowDetailModal(false)}
+            projectPath={project.path}
+            type={detailModalType}
+            number={detailModalNumber}
+            onRefresh={() => {
+              if (detailModalType === 'issue') {
+                loadIssues();
+              } else {
+                refreshPrs();
+              }
+            }}
           />
         </div>
       </div>

@@ -171,6 +171,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('github:getIssues', args),
   githubSearchIssues: (args: { projectPath: string; searchTerm: string; limit?: number }) =>
     ipcRenderer.invoke('github:searchIssues', args),
+  githubGetIssue: (args: { projectPath: string; issueNumber: number }) =>
+    ipcRenderer.invoke('github:getIssue', args),
+  githubGetPR: (args: { projectPath: string; prNumber: number }) =>
+    ipcRenderer.invoke('github:getPR', args),
+  githubAddIssueComment: (args: { projectPath: string; issueNumber: number; body: string }) =>
+    ipcRenderer.invoke('github:addIssueComment', args),
+  githubAddPRComment: (args: { projectPath: string; prNumber: number; body: string }) =>
+    ipcRenderer.invoke('github:addPRComment', args),
+  githubCloseIssue: (args: { projectPath: string; issueNumber: number; comment?: string }) =>
+    ipcRenderer.invoke('github:closeIssue', args),
+  githubReopenIssue: (args: { projectPath: string; issueNumber: number; comment?: string }) =>
+    ipcRenderer.invoke('github:reopenIssue', args),
   // Linear integration
   linearSaveToken: (token: string) => ipcRenderer.invoke('linear:saveToken', token),
   linearCheckConnection: () => ipcRenderer.invoke('linear:checkConnection'),
