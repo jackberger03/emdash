@@ -16,11 +16,21 @@ export interface RightSidebarWorkspace {
   metadata?: WorkspaceMetadata | null;
 }
 
-interface RightSidebarProps extends React.HTMLAttributes<HTMLElement> {
-  workspace: RightSidebarWorkspace | null;
+interface SSHInfo {
+  enabled: boolean;
+  host: string;
+  user: string;
+  remotePath: string;
+  port?: number;
+  keyPath?: string;
 }
 
-const RightSidebar: React.FC<RightSidebarProps> = ({ workspace, className, ...rest }) => {
+interface RightSidebarProps extends React.HTMLAttributes<HTMLElement> {
+  workspace: RightSidebarWorkspace | null;
+  sshInfo?: SSHInfo;
+}
+
+const RightSidebar: React.FC<RightSidebarProps> = ({ workspace, sshInfo, className, ...rest }) => {
   const { collapsed } = useRightSidebar();
   const { getAllWorkspaceIds } = useTerminalRegistry();
 
@@ -78,7 +88,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ workspace, className, ...re
                     key={wsId}
                     className={`min-h-0 flex-1 ${wsId === workspace?.id ? 'block' : 'hidden'}`}
                   >
-                    <WorkspaceTerminalPanel workspace={minimalWorkspace} />
+                    <WorkspaceTerminalPanel workspace={minimalWorkspace} sshInfo={sshInfo} />
                   </div>
                 );
               }
@@ -87,7 +97,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ workspace, className, ...re
                   key={ws.id}
                   className={`min-h-0 flex-1 ${ws.id === workspace?.id ? 'block' : 'hidden'}`}
                 >
-                  <WorkspaceTerminalPanel workspace={ws} />
+                  <WorkspaceTerminalPanel workspace={ws} sshInfo={sshInfo} />
                 </div>
               );
             })}

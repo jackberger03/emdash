@@ -33,7 +33,6 @@ export function createFloatingWindow(): BrowserWindow {
     vibrancy: 'under-window', // macOS vibrancy
     visualEffectState: 'active',
     focusable: true, // Allow focus when user clicks
-    parent: getMainWindow() || undefined, // Set main window as parent to maintain dock presence
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

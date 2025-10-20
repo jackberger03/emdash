@@ -2,12 +2,22 @@ import React, { useEffect, useRef } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { log } from '../lib/logger';
 
+interface SSHConfig {
+  enabled: boolean;
+  host: string;
+  user: string;
+  remotePath: string;
+  port?: number;
+  keyPath?: string;
+}
+
 type Props = {
   id: string;
   cwd?: string;
   cols?: number;
   rows?: number;
   shell?: string;
+  sshConfig?: SSHConfig;
   className?: string;
   variant?: 'dark' | 'light';
   themeOverride?: any;
@@ -27,6 +37,7 @@ const ChatTerminalComponent: React.FC<Props> = ({
   cols = 80,
   rows = 24,
   shell,
+  sshConfig,
   className,
   variant = 'dark',
   themeOverride,
@@ -205,6 +216,7 @@ const ChatTerminalComponent: React.FC<Props> = ({
           cols,
           rows,
           shell,
+          sshConfig,
         });
 
         console.log('[ChatTerminal] PTY start result:', {

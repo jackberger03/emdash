@@ -1529,7 +1529,11 @@ const AppContent: React.FC = () => {
                 collapsible
                 order={3}
               >
-                <RightSidebar workspace={activeWorkspace} className="lg:border-l-0" />
+                <RightSidebar
+                  workspace={activeWorkspace}
+                  sshInfo={selectedProject?.sshInfo}
+                  className="lg:border-l-0"
+                />
               </ResizablePanel>
             </ResizablePanelGroup>
           </div>

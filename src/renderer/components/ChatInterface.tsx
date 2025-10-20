@@ -599,6 +599,7 @@ const ChatInterface: React.FC<Props> = ({
                       id={`chat-${effectiveWorkspaceId}-${p}`}
                       cwd={workspace.path}
                       shell={buildShellCommand(p)}
+                      sshConfig={sshInfo?.enabled ? sshInfo : undefined}
                       onActivity={() => {
                         try {
                           window.localStorage.setItem(`provider:locked:${effectiveWorkspaceId}`, p);

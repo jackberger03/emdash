@@ -12,8 +12,18 @@ interface Workspace {
   status: 'active' | 'idle' | 'running';
 }
 
+interface SSHInfo {
+  enabled: boolean;
+  host: string;
+  user: string;
+  remotePath: string;
+  port?: number;
+  keyPath?: string;
+}
+
 interface Props {
   workspace: Workspace | null;
+  sshInfo?: SSHInfo;
   className?: string;
 }
 
@@ -22,7 +32,7 @@ interface TerminalTab {
   label: string;
 }
 
-const WorkspaceTerminalPanelComponent: React.FC<Props> = ({ workspace, className }) => {
+const WorkspaceTerminalPanelComponent: React.FC<Props> = ({ workspace, sshInfo, className }) => {
   const { effectiveTheme } = useTheme();
   const { getTerminalState, updateTerminalState } = useTerminalRegistry();
 
@@ -188,6 +198,7 @@ const WorkspaceTerminalPanelComponent: React.FC<Props> = ({ workspace, className
                   <TerminalPane
                     id={`workspace-${workspace.id}-tab-${tab.id}`}
                     cwd={workspace.path}
+                    sshConfig={sshInfo?.enabled ? sshInfo : undefined}
                     variant={effectiveTheme === 'light' ? 'light' : 'dark'}
                     keepAlive={true}
                     themeOverride={
