@@ -10,6 +10,7 @@ import { useWorkspaceChanges } from '../hooks/useWorkspaceChanges';
 import { ChangesBadge } from './WorkspaceChanges';
 import { Spinner } from './ui/spinner';
 import WorkspaceDeleteButton from './WorkspaceDeleteButton';
+import ProjectDeleteButton from './ProjectDeleteButton';
 
 interface Project {
   id: string;
@@ -149,6 +150,7 @@ interface ProjectMainViewProps {
   onSelectWorkspace: (workspace: Workspace) => void;
   onDeleteWorkspace: (project: Project, workspace: Workspace) => void | Promise<void>;
   isCreatingWorkspace?: boolean;
+  onDeleteProject?: (project: Project) => void | Promise<void>;
 }
 
 const ProjectMainView: React.FC<ProjectMainViewProps> = ({
@@ -158,6 +160,7 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
   onSelectWorkspace,
   onDeleteWorkspace,
   isCreatingWorkspace = false,
+  onDeleteProject,
 }) => {
   // PR list functionality is temporarily disabled.
 
@@ -188,6 +191,13 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                   </BreadcrumbList>
                 </Breadcrumb>
               </div>
+              {onDeleteProject ? (
+                <ProjectDeleteButton
+                  projectName={project.name}
+                  onConfirm={() => onDeleteProject?.(project)}
+                  className="inline-flex items-center justify-center rounded p-2 text-muted-foreground hover:text-destructive"
+                />
+              ) : null}
             </header>
             <Separator className="my-2" />
           </div>
