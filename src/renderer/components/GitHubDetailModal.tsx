@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { Loader2, X, ExternalLink, MessageSquare } from 'lucide-react';
+import { Loader2, X, ExternalLink, MessageSquare, User, Calendar, Shield } from 'lucide-react';
 import githubLogo from '../../assets/images/github.png';
+import { stripHtmlComments, extractTicketMetadata, TicketMetadata } from '../lib/utils';
 
 // Calculate contrast color for label text
 const getContrastColor = (hexColor: string): string => {
@@ -45,6 +46,15 @@ export const GitHubDetailModal: React.FC<GitHubDetailModalProps> = ({
   const [commentBody, setCommentBody] = useState('');
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
+
+  // Extract ticket metadata from the issue body
+  const { metadata, cleanedBody } = useMemo(() => {
+    if (!detail?.body) {
+      return { metadata: null, cleanedBody: '' };
+    }
+    const { metadata, cleanedText } = extractTicketMetadata(detail.body);
+    return { metadata, cleanedBody: cleanedText };
+  }, [detail?.body]);
 
   useEffect(() => {
     if (isOpen) {
@@ -210,16 +220,13 @@ export const GitHubDetailModal: React.FC<GitHubDetailModalProps> = ({
                 <div className="flex flex-wrap gap-2">
                   {detail.labels.map((label: any, idx: number) => {
                     const hexColor = label.color ? `#${label.color}` : '#6b7280';
-                    const textColor = getContrastColor(hexColor);
                     return (
                       <span
                         key={idx}
-                        className="rounded-full border px-3 py-1 text-xs font-medium backdrop-blur-sm"
+                        className="rounded-full px-3 py-1 text-xs font-medium"
                         style={{
                           backgroundColor: `${hexColor}20`,
-                          borderColor: `${hexColor}40`,
-                          color: textColor,
-                          opacity: 0.8,
+                          color: hexColor,
                         }}
                       >
                         {label.name}
@@ -229,8 +236,62 @@ export const GitHubDetailModal: React.FC<GitHubDetailModalProps> = ({
                 </div>
               )}
 
+              {/* Ticket Metadata */}
+              {metadata && (
+                <div className="rounded-lg border border-blue-200 bg-blue-50/50 p-4 dark:border-blue-900 dark:bg-blue-950/30">
+                  <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
+                    <Shield className="h-4 w-4" />
+                    Ticket Information
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+                    {metadata.creatorName && (
+                      <div className="flex items-start gap-2">
+                        <User className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <div className="font-medium text-blue-900 dark:text-blue-100">
+                            Created by
+                          </div>
+                          <div className="text-blue-700 dark:text-blue-300">
+                            {metadata.creatorName}
+                          </div>
+                          {metadata.creatorEmail && (
+                            <div className="text-xs text-blue-600 dark:text-blue-400">
+                              {metadata.creatorEmail}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {metadata.createdAt && (
+                      <div className="flex items-start gap-2">
+                        <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <div className="font-medium text-blue-900 dark:text-blue-100">
+                            Created at
+                          </div>
+                          <div className="text-blue-700 dark:text-blue-300">
+                            {new Date(metadata.createdAt).toLocaleString()}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {metadata.ownerRole && (
+                      <div className="flex items-start gap-2">
+                        <Shield className="mt-0.5 h-4 w-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                        <div>
+                          <div className="font-medium text-blue-900 dark:text-blue-100">Role</div>
+                          <div className="text-blue-700 dark:text-blue-300">
+                            {metadata.ownerRole}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Body */}
-              {detail.body && (
+              {cleanedBody && (
                 <div className="rounded-lg border border-border bg-muted/30 p-4">
                   <div className="prose prose-sm dark:prose-invert max-w-none">
                     <ReactMarkdown
@@ -276,7 +337,7 @@ export const GitHubDetailModal: React.FC<GitHubDetailModalProps> = ({
                         ),
                       }}
                     >
-                      {detail.body}
+                      {cleanedBody}
                     </ReactMarkdown>
                   </div>
                 </div>

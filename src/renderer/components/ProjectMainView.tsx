@@ -511,16 +511,13 @@ const ProjectMainView: React.FC<ProjectMainViewProps> = ({
                                   <div className="flex items-center gap-1">
                                     {issue.labels.slice(0, 3).map((label: any, idx: number) => {
                                       const hexColor = label.color ? `#${label.color}` : '#6b7280';
-                                      const textColor = getContrastColor(hexColor);
                                       return (
                                         <span
                                           key={idx}
-                                          className="rounded-full border px-2 py-0.5 text-[10px] font-medium backdrop-blur-sm"
+                                          className="rounded-full px-2 py-0.5 text-[10px] font-medium"
                                           style={{
                                             backgroundColor: `${hexColor}20`,
-                                            borderColor: `${hexColor}40`,
-                                            color: textColor,
-                                            opacity: 0.8,
+                                            color: hexColor,
                                           }}
                                         >
                                           {label.name}
