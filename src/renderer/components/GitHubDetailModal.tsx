@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { Separator } from './ui/separator';
@@ -210,7 +211,53 @@ export const GitHubDetailModal: React.FC<GitHubDetailModalProps> = ({
               {/* Body */}
               {detail.body && (
                 <div className="rounded-lg border border-border bg-muted/30 p-4">
-                  <div className="whitespace-pre-wrap text-sm">{detail.body}</div>
+                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        code: ({ inline, className, children, ...props }: any) => {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <pre className="overflow-x-auto rounded-md bg-gray-100 p-3 dark:bg-gray-800">
+                              <code className={className} {...props}>
+                                {children}
+                              </code>
+                            </pre>
+                          ) : (
+                            <code
+                              className="rounded bg-gray-100 px-1 py-0.5 text-sm dark:bg-gray-800"
+                              {...props}
+                            >
+                              {children}
+                            </code>
+                          );
+                        },
+                        ul: ({ children }) => (
+                          <ul className="my-2 list-inside list-disc space-y-1">{children}</ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="my-2 list-inside list-decimal space-y-1">{children}</ol>
+                        ),
+                        li: ({ children }) => <li className="ml-2">{children}</li>,
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        strong: ({ children }) => (
+                          <strong className="font-semibold">{children}</strong>
+                        ),
+                        em: ({ children }) => <em className="italic">{children}</em>,
+                        a: ({ children, href }) => (
+                          <a
+                            href={href}
+                            className="text-blue-600 hover:underline dark:text-blue-400"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {children}
+                          </a>
+                        ),
+                      }}
+                    >
+                      {detail.body}
+                    </ReactMarkdown>
+                  </div>
                 </div>
               )}
 
@@ -249,7 +296,55 @@ export const GitHubDetailModal: React.FC<GitHubDetailModalProps> = ({
                             </span>
                           )}
                         </div>
-                        <div className="whitespace-pre-wrap text-sm">{comment.body}</div>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown
+                            components={{
+                              code: ({ inline, className, children, ...props }: any) => {
+                                const match = /language-(\w+)/.exec(className || '');
+                                return !inline && match ? (
+                                  <pre className="overflow-x-auto rounded-md bg-gray-100 p-3 dark:bg-gray-800">
+                                    <code className={className} {...props}>
+                                      {children}
+                                    </code>
+                                  </pre>
+                                ) : (
+                                  <code
+                                    className="rounded bg-gray-100 px-1 py-0.5 text-sm dark:bg-gray-800"
+                                    {...props}
+                                  >
+                                    {children}
+                                  </code>
+                                );
+                              },
+                              ul: ({ children }) => (
+                                <ul className="my-2 list-inside list-disc space-y-1">{children}</ul>
+                              ),
+                              ol: ({ children }) => (
+                                <ol className="my-2 list-inside list-decimal space-y-1">
+                                  {children}
+                                </ol>
+                              ),
+                              li: ({ children }) => <li className="ml-2">{children}</li>,
+                              p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                              strong: ({ children }) => (
+                                <strong className="font-semibold">{children}</strong>
+                              ),
+                              em: ({ children }) => <em className="italic">{children}</em>,
+                              a: ({ children, href }) => (
+                                <a
+                                  href={href}
+                                  className="text-blue-600 hover:underline dark:text-blue-400"
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  {children}
+                                </a>
+                              ),
+                            }}
+                          >
+                            {comment.body}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                     ))}
                   </div>

@@ -243,15 +243,22 @@ const useClaudeStream = (options?: Options | null): Result => {
         });
       } catch {}
 
-      // Show notification if window is not focused
-      if (typeof window !== 'undefined' && !document.hasFocus()) {
-        if ('Notification' in window && Notification.permission === 'granted') {
+      // Show notification
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        const hasFocus = document.hasFocus();
+        console.log(
+          'Claude complete - hasFocus:',
+          hasFocus,
+          'permission:',
+          Notification.permission
+        );
+
+        if (!hasFocus && Notification.permission === 'granted') {
+          console.log('Showing Claude completion notification');
           new Notification('Claude Finished', {
             body: 'Your Claude agent has completed its task.',
             silent: false,
           });
-        } else if ('Notification' in window && Notification.permission === 'default') {
-          Notification.requestPermission();
         }
       }
 
