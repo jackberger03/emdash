@@ -21,37 +21,103 @@ import { RightSidebarProvider, useRightSidebar } from './components/ui/right-sid
 import RightSidebar from './components/RightSidebar';
 import { type Provider } from './types';
 import { type LinearIssueSummary } from './types/linear';
-import { providerMeta, type UiProvider } from './providers/meta';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from './components/ui/resizable';
 import { loadPanelSizes, savePanelSizes } from './lib/persisted-layout';
 import type { ImperativePanelHandle } from 'react-resizable-panels';
 import SettingsModal from './components/SettingsModal';
+import CommandPalette from './components/CommandPalette';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
-const SidebarHotkeys: React.FC = () => {
+interface AppKeyboardShortcutsProps {
+  showCommandPalette: boolean;
+  showSettings: boolean;
+  handleToggleCommandPalette: () => void;
+  handleOpenSettings: () => void;
+  handleCloseCommandPalette: () => void;
+  handleCloseSettings: () => void;
+}
+
+const AppKeyboardShortcuts: React.FC<AppKeyboardShortcutsProps> = ({
+  showCommandPalette,
+  showSettings,
+  handleToggleCommandPalette,
+  handleOpenSettings,
+  handleCloseCommandPalette,
+  handleCloseSettings,
+}) => {
   const { toggle: toggleLeftSidebar } = useSidebar();
   const { toggle: toggleRightSidebar } = useRightSidebar();
+  const { toggleTheme } = useTheme();
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
-    const handler = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'b') {
-        event.preventDefault();
-        toggleLeftSidebar();
-      }
-
-      const isRightPanelHotkey = event.key === '.' || event.code?.toLowerCase() === 'period';
-
-      if ((event.metaKey || event.ctrlKey) && isRightPanelHotkey) {
-        event.preventDefault();
-        toggleRightSidebar();
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [toggleLeftSidebar, toggleRightSidebar]);
+  // Single global keyboard shortcuts handler
+  useKeyboardShortcuts({
+    onToggleCommandPalette: handleToggleCommandPalette,
+    onOpenSettings: handleOpenSettings,
+    onToggleLeftSidebar: toggleLeftSidebar,
+    onToggleRightSidebar: toggleRightSidebar,
+    onToggleTheme: toggleTheme,
+    onCloseModal: showCommandPalette
+      ? handleCloseCommandPalette
+      : showSettings
+        ? handleCloseSettings
+        : undefined,
+    isCommandPaletteOpen: showCommandPalette,
+    isSettingsOpen: showSettings,
+  });
 
   return null;
+};
+
+interface CommandPaletteWrapperProps {
+  isOpen: boolean;
+  onClose: () => void;
+  projects: Project[];
+  handleSelectProject: (project: Project) => void;
+  handleSelectWorkspace: (workspace: Workspace) => void;
+  handleGoHome: () => void;
+  handleOpenProject: () => void;
+  handleOpenSettings: () => void;
+}
+
+const CommandPaletteWrapper: React.FC<CommandPaletteWrapperProps> = ({
+  isOpen,
+  onClose,
+  projects,
+  handleSelectProject,
+  handleSelectWorkspace,
+  handleGoHome,
+  handleOpenProject,
+  handleOpenSettings,
+}) => {
+  const { toggle: toggleLeftSidebar } = useSidebar();
+  const { toggle: toggleRightSidebar } = useRightSidebar();
+  const { toggleTheme } = useTheme();
+
+  return (
+    <CommandPalette
+      isOpen={isOpen}
+      onClose={onClose}
+      projects={projects}
+      onSelectProject={(projectId) => {
+        const project = projects.find((p) => p.id === projectId);
+        if (project) handleSelectProject(project);
+      }}
+      onSelectWorkspace={(projectId, workspaceId) => {
+        const project = projects.find((p) => p.id === projectId);
+        const workspace = project?.workspaces?.find((w) => w.id === workspaceId);
+        if (project && workspace) {
+          handleSelectProject(project);
+          handleSelectWorkspace(workspace);
+        }
+      }}
+      onOpenSettings={handleOpenSettings}
+      onToggleLeftSidebar={toggleLeftSidebar}
+      onToggleRightSidebar={toggleRightSidebar}
+      onToggleTheme={toggleTheme}
+      onGoHome={handleGoHome}
+      onOpenProject={handleOpenProject}
+    />
+  );
 };
 
 const RightSidebarBridge: React.FC<{
@@ -136,15 +202,12 @@ const AppContent: React.FC = () => {
   const { effectiveTheme } = useTheme();
 
   const { toast } = useToast();
-  const [version, setVersion] = useState<string>('');
+  const [_, setVersion] = useState<string>('');
   const [platform, setPlatform] = useState<string>('');
   const {
     installed: ghInstalled,
     authenticated: isAuthenticated,
     user,
-    isLoading,
-    login: handleGitHubAuth,
-    logout: handleLogout,
     checkStatus,
   } = useGithubAuth();
   const [projects, setProjects] = useState<Project[]>([]);
@@ -157,6 +220,7 @@ const AppContent: React.FC = () => {
   const [isCodexInstalled, setIsCodexInstalled] = useState<boolean | null>(null);
   const [isClaudeInstalled, setIsClaudeInstalled] = useState<boolean | null>(null);
   const [showSettings, setShowSettings] = useState<boolean>(false);
+  const [showCommandPalette, setShowCommandPalette] = useState<boolean>(false);
   const showGithubRequirement = !ghInstalled || !isAuthenticated;
   // Show agent requirements block if none of the supported CLIs are detected locally.
   // We only actively detect Codex and Claude Code; Factory (Droid) docs are shown as an alternative.
@@ -293,25 +357,13 @@ const AppContent: React.FC = () => {
     setShowSettings(false);
   }, []);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return undefined;
+  const handleToggleCommandPalette = useCallback(() => {
+    setShowCommandPalette((prev) => !prev);
+  }, []);
 
-    const handler = (event: KeyboardEvent) => {
-      if (!(event.metaKey || event.ctrlKey)) {
-        return;
-      }
-
-      const key = event.key?.toLowerCase();
-      const code = event.code?.toLowerCase();
-      if (key === ',' || code === 'comma') {
-        event.preventDefault();
-        handleOpenSettings();
-      }
-    };
-
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [handleOpenSettings]);
+  const handleCloseCommandPalette = useCallback(() => {
+    setShowCommandPalette(false);
+  }, []);
 
   useEffect(() => {
     const rightPanel = rightSidebarPanelRef.current;
@@ -1027,11 +1079,18 @@ const AppContent: React.FC = () => {
     >
       <SidebarProvider>
         <RightSidebarProvider defaultCollapsed>
+          <AppKeyboardShortcuts
+            showCommandPalette={showCommandPalette}
+            showSettings={showSettings}
+            handleToggleCommandPalette={handleToggleCommandPalette}
+            handleOpenSettings={handleOpenSettings}
+            handleCloseCommandPalette={handleCloseCommandPalette}
+            handleCloseSettings={handleCloseSettings}
+          />
           <RightSidebarBridge
             onCollapsedChange={handleRightSidebarCollapsedChange}
             setCollapsedRef={rightSidebarSetCollapsedRef}
           />
-          <SidebarHotkeys />
           <Titlebar onToggleSettings={handleToggleSettings} isSettingsOpen={showSettings} />
           <div className="flex flex-1 overflow-hidden pt-[var(--tb)]">
             <ResizablePanelGroup
@@ -1100,6 +1159,16 @@ const AppContent: React.FC = () => {
             </ResizablePanelGroup>
           </div>
           <SettingsModal isOpen={showSettings} onClose={handleCloseSettings} />
+          <CommandPaletteWrapper
+            isOpen={showCommandPalette}
+            onClose={handleCloseCommandPalette}
+            projects={projects}
+            handleSelectProject={handleSelectProject}
+            handleSelectWorkspace={handleSelectWorkspace}
+            handleGoHome={handleGoHome}
+            handleOpenProject={handleOpenProject}
+            handleOpenSettings={handleOpenSettings}
+          />
           <WorkspaceModal
             isOpen={showWorkspaceModal}
             onClose={() => setShowWorkspaceModal(false)}

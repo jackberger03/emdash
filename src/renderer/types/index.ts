@@ -57,3 +57,12 @@ export type Provider =
   | 'opencode'
   | 'charm'
   | 'auggie';
+
+// Keyboard shortcuts types
+export type {
+  ShortcutConfig,
+  ShortcutModifier,
+  KeyboardShortcut,
+  ShortcutMapping,
+  GlobalShortcutHandlers,
+} from './shortcuts';
